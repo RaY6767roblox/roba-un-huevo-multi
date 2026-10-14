@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Roba un Huevo - 14 Zonas</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#101827;color:white;font-family:Arial,sans-serif}
+header{background:#172338;padding:12px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+h1{font-size:20px;margin:0}
+#stats{display:flex;gap:12px;flex-wrap:wrap;font-size:14px}
+#help{background:#24354d;padding:10px;font-size:13px;line-height:1.6}
+canvas{display:block;width:100%;height:65vh;min-height:400px;background:#78caff}
+#inventory{background:#172338;padding:12px;font-size:13px;line-height:1.8;overflow-wrap:anywhere}
+#message{position:absolute;top:10px;left:50%;transform:translateX(-50%);background:#111e;padding:10px;border-radius:10px;display:none;text-align:center;z-index:4;max-width:90%}
+#shop{display:none;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:#172338;border:2px solid #ffd45c;border-radius:14px;padding:18px;width:min(450px,94vw);max-height:90%;overflow:auto;z-index:5;box-shadow:0 10px 50px #000b}
+button{background:#ffd45c;color:#172338;border:0;border-radius:7px;padding:10px;margin:4px;font-weight:bold;cursor:pointer}
+button:disabled{opacity:.5;cursor:default}
+#gameWrap{position:relative}
+.small{font-size:12px;color:#cbd5e1}
+</style>
+</head>
+<body>
+<header>
+  <h1>🥚 Roba un Huevo — 14 Zonas</h1>
+  <div id="stats">
+    <span>🪙 <b id="money">100</b></span>
+    <span>⚡ Velocidad: <b id="speed">10</b></span>
+    <span>🛒 Nivel de Robo: <b id="amount">100</b></span>
+    <span>🎒 <b id="capacity">0/5</b></span>
+    <span>📅 Día <b id="day">1</b></span>
+    <span>⏱️ <b id="time">60</b>s</span>
+  </div>
+</header>
+
+<div id="help">
+<b>WASD / flechas:</b> moverte · <b>SHIFT:</b> correr · <b>E:</b> robar o plantar huevo · <b>B:</b> tienda cerca de la base.
+Tu velocidad al caminar se mantiene cómoda para no teletransportarte, pero tus mejoras te dan el poder necesario para robar en zonas altas.
+</div>
+
+<div id="gameWrap">
+<canvas id="game" width="1200" height="650"></canvas>
+<div id="message"></div>
+<div id="shop">
+<h2>🏪 Tienda de mejoras</h2>
+<p>Dinero: <b id="shopMoney">100</b></p>
+<p>Nivel de Robo actual: <b id="shopSpeed">10</b></p>
+<p>Sube +<b id="shopAmount">100</b> de poder</p>
+<p>Precio: <b id="shopPrice">5.000</b> monedas</p>
+<button id="buySpeed">⚡ Comprar Poder de Robo</button>
+<hr>
+<button id="buyCapacity">🎒 Ampliar capacidad</button>
+<button id="closeShop">Cerrar tienda</button>
+<p class="small">Escala automática:<br>• 100 en 100 (Inicio)<br>• 1.000 en 1.000 (Desde 10.000)<br>• 10.000 en 10.000 (Desde 25.000)<br>• 100.000 en 100.000 (Desde 100.000)</p>
+</div>
+</div>
+
+<div id="inventory">
+<b>🎒 Huevos:</b> <span id="egginv">Vacío</span><br>
+<b>🌱 Jardín:</b> <span id="gardeninv">Todavía no tienes criaturas.</span>
+</div>
+
+<script>
+(()=>{
+const canvas=document.getElementById('game');
+const ctx=canvas.getContext('2d');
+const $=id=>document.getElementById(id);
+
+const SAFE=750, GARDEN_X=350, GARDEN_Y=700;
+const MAP_W=22000, MAP_H=1000;
+const DAY_MS=60000, NIGHT_MS=10000;
+
+const zones=[
+ {name:'Bosque',need:10,color:'#438d40',boss:'🌳',open:8,reward:25,income:3,creatures:['Pollito del bosque','Zorro verde','Ciervo pequeño']},
+ {name:'Lago',need:100,color:'#319bd4',boss:'🐊',open:12,reward:100,income:20,creatures:['Nutria mágica','Serpiente de agua','Tortuga azul']},
+ {name:'Desierto',need:500,color:'#d9a441',boss:'🦂',open:18,reward:350,income:80,creatures:['Escorpión dorado','Zorro del desierto','Fénix de arena']},
+ {name:'Selva',need:1000,color:'#16834a',boss:'🐅',open:22,reward:700,income:150,creatures:['Tigre selvático','Gólem de hojas','Serpiente gigante']},
+ {name:'Nieve',need:2500,color:'#b9e4f6',boss:'❄️',open:28,reward:1500,income:350,creatures:['Lobo de hielo','Yeti pequeño','Zorro ártico']},
+ {name:'Volcán',need:5000,color:'#ed572b',boss:'🌋',open:35,reward:3000,income:700,creatures:['Dragón de lava','Gólem volcánico','Fénix ardiente']},
+ {name:'Océano del Abismo',need:10000,color:'#164e9b',boss:'🦑',open:45,reward:6000,income:1400,creatures:['Kraken bebé','Tiburón abisal','Medusa oscura']},
+ {name:'Prehistórico',need:15000,color:'#8d6e63',boss:'🦖',open:55,reward:10000,income:2200,creatures:['Tiranosaurio bebé','Triceratops','Raptor antiguo']},
+ {name:'Cósmico',need:25000,color:'#4527a0',boss:'🌌',open:65,reward:18000,income:3500,creatures:['Dragón estelar','Cometa viviente','Guardián galáctico']},
+ {name:'Flor de Cerezo',need:50000,color:'#ed8ab4',boss:'🌸',open:75,reward:30000,income:6000,creatures:['Zorro sakura','Dragón de pétalos','Espíritu de cerezo']},
+ {name:'Templo del Titán',need:100000,color:'#9e8876',boss:'🗿',open:85,reward:50000,income:7500,creatures:['Titán antiguo','Coloso de piedra','Guardián del templo']},
+ {name:'Angels and Demons',need:250000,color:'#a28bff',boss:'😇',open:95,reward:100000,income:10000,creatures:['Ángel','Demonio','Ángeles y Demonios']},
+ {name:'Bosque Encantado',need:500000,color:'#269b88',boss:'🧚',open:110,reward:200000,income:25000,creatures:['Hada antigua','Árbol consciente','Dragón encantado']},
+ {name:'Zona Admin',need:2500000,color:'#e8d73d',boss:'👑',open:120,reward:1000000,income:60000,creatures:['Admin dorado','Dios del código','Entidad suprema']}
+];
+
+const specialZones=[9,10,11,12,13];
+const angelCycle=['Ángel','Demonio','Ángeles y Demonios'];
+
+let player={x:250,y:700,speed:10,power:10,money:1000000,capacity:5,inventory:[],carrying:null};
+let eggs=[],bosses=[],creatures=[],keys={};
+let cameraX=0,night=false,day=1,phaseStart=Date.now(),lastIncome=Date.now();
+let shopOpen=false,messageTimer=null;
+
+const rand=(a,b)=>a+Math.random()*(b-a);
+const fmt=n=>Math.floor(n).toLocaleString('es-EC');
+const zoneX=i=>1000+i*1450;
+
+function amount(){
+ if(player.power>=100000) return 100000;
+ if(player.power>=25000) return 10000;
+ if(player.power>=10000) return 1000;
+ return 100;
+}
+function speedPrice(){
+ return amount() * 50;
+}
+
+function say(text){
+ $('message').textContent=text;
+ $('message').style.display='block';
+ clearTimeout(messageTimer);
+ messageTimer=setTimeout(()=>$('message').style.display='none',2800);
+}
+
+function makeEgg(i,special=false){
+ return {
+  id:Math.random().toString(36).slice(2),
+  zone:i,x:rand(zoneX(i)+100,zoneX(i)+1300),y:rand(250,850),
+  special,stolen:false,carried:false,timer:zones[i].open,opened:false
+ };
+}
+function createWorld(){
+ eggs=[];bosses=[];
+ zones.forEach((z,i)=>{
+  for(let j=0;j<5;j++)eggs.push(makeEgg(i));
+  bosses.push({
+   zone:i,x:zoneX(i)+720,y:800,
+   homeX:zoneX(i)+720,homeY:800,
+   speed:Math.min(6, 2 + i * 0.3),chasing:null
+  });
+ });
+ spawnSpecialEggs();
+}
+function spawnSpecialEggs(){
+ eggs=eggs.filter(e=>!e.special);
+ for(const i of specialZones)eggs.push(makeEgg(i,true));
+}
+function resetBoss(e){
+ const b=bosses[e.zone];
+ if(b){b.chasing=null;b.x=b.homeX;b.y=b.homeY}
+}
+function nearBase(){
+ return Math.hypot(player.x-250,player.y-GARDEN_Y)<260;
+}
+function nearTreadmill(){
+ return Math.hypot(player.x-(GARDEN_X+420),player.y-GARDEN_Y)<170;
+}
+function openShop(){
+ if(!nearBase()&&!nearTreadmill()){
+  say('Acércate a la base o a la caminadora para comprar mejoras.');
+  return;
+ }
+ shopOpen=true;$('shop').style.display='block';updateShop();
+}
+function closeShop(){shopOpen=false;$('shop').style.display='none'}
+
+function updateShop() {
+  document.getElementById('shopMoney').textContent = fmt(player.money);
+  document.getElementById('shopSpeed').textContent = fmt(player.power);
+  document.getElementById('shopAmount').textContent = fmt(amount());
+  document.getElementById('shopPrice').textContent = fmt(speedPrice());
+
+  const buyButton = document.getElementById('buySpeed');
+  buyButton.textContent = `⚡ Comprar +${fmt(amount())} de Poder (${fmt(speedPrice())} monedas)`;
+
+  document.getElementById('buyCapacity').textContent =
+    `🎒 Ampliar capacidad (${fmt(250 + (player.capacity - 5) * 250)} monedas)`;
+}
+
+document.getElementById('buySpeed').onclick = function () {
+  const cost = speedPrice();
+  const increase = amount();
+
+  if (player.money < cost) {
+    say('No tienes suficientes monedas. Necesitas ' + fmt(cost) + ' monedas.');
+    return;
+  }
+
+  player.money -= cost;
+  player.power += increase;
+  
+  // Mantiene la velocidad de movimiento física suave y controlada
+  player.speed = Math.min(22, 10 + Math.floor(Math.log10(player.power + 1) * 2));
+
+  if(player.power >= 100000 && player.power - increase < 100000){
+    say('👑 ¡Poder de 100.000 alcanzado! Ahora compras de 100.000 en 100.000.');
+  } else if(player.power >= 25000 && player.power - increase < 25000){
+    say('⭐ ¡Poder de 25.000 alcanzado! Ahora compras de 10.000 en 10.000.');
+  } else if(player.power >= 10000 && player.power - increase < 10000){
+    say('🚀 ¡Poder de 10.000 alcanzado! Ahora compras de 1.000 en 1.000.');
+  } else {
+    say('¡Compraste +' + fmt(increase) + ' de poder de robo!');
+  }
+
+  updateHud();
+  updateShop();
+};
+
+$('buyCapacity').onclick=()=>{
+ const cost=250+(player.capacity-5)*250;
+ if(player.money<cost){say('No tienes suficientes monedas.');return}
+ player.money-=cost;player.capacity++;
+ say('¡Capacidad aumentada!');updateHud();updateShop();
+};
+$('closeShop').onclick=closeShop;
+
+function reiniciarHuevosDeNoche() {
+  eggs.length = 0;
+  zones.forEach((zone, index) => {
+    for (let i = 0; i < 5; i++) {
+      eggs.push({
+        id: Math.random().toString(36).slice(2),
+        zone: index,
+        x: rand(zoneX(index) + 100, zoneX(index) + 1300),
+        y: rand(250, 850),
+        special: false,
+        stolen: false,
+        carried: false,
+        timer: zone.open,
+        opened: false
+      });
+    }
+  });
+  spawnSpecialEggs();
+  bosses.forEach((boss, index) => {
+    boss.x = boss.homeX;
+    boss.y = boss.homeY;
+    boss.chasing = null;
+  });
+  player.carrying = null;
+  say("🌙 ¡Noche! Todos los huevos se reiniciaron.");
+}
+
+function nearestEgg(){
+ let result=null,best=125;
+ for(const e of eggs){
+  if(e.stolen||e.carried)continue;
+  const d=Math.hypot(player.x-e.x,player.y-e.y);
+  if(d<best){best=d;result=e}
+ }
+ return result;
+}
+function interact(){
+ if(shopOpen){closeShop();return}
+ if(night){say('🌙 Es de noche. Espera a que amanezca para robar huevos.');return}
+
+ if(player.carrying){
+  if(player.x<=SAFE){deliverEgg();return}
+  if(player.x<GARDEN_X+210&&player.y>GARDEN_Y-160){plantEgg();return}
+  say('Lleva el huevo a la línea segura o al jardín.');return;
+ }
+
+ const e=nearestEgg();
+ if(!e){say('Acércate a un huevo y presiona E.');return}
+ const z=zones[e.zone];
+
+ if(player.power<z.need){
+  say(`Necesitas ${fmt(z.need)} de poder para robar en ${z.name}. Tienes ${fmt(player.power)}.`);
+  return;
+ }
+ if(player.inventory.length>=player.capacity){
+  say('Inventario lleno. Espera a que eclosionen huevos o mejora la capacidad.');return;
+ }
+ e.stolen=true;e.carried=true;player.carrying=e;
+ bosses[e.zone].chasing=e.id;
+ say((e.special?'✨ ¡HUEVO ESPECIAL CON AURA! ':'')+'¡Robaste un huevo de '+z.name+'! Corre a la zona segura.');
+}
+function deliverEgg(){
+ const e=player.carrying;if(!e)return;
+ if(player.inventory.length>=player.capacity){
+  say('Inventario lleno. No puedes guardar este huevo.');return;
+ }
+ e.carried=false;e.timer=zones[e.zone].open;
+ player.inventory.push(e);player.money+=zones[e.zone].reward;
+ eggs=eggs.filter(x=>x.id!==e.id);resetBoss(e);player.carrying=null;
+ say(`¡Huevo entregado! +${fmt(zones[e.zone].reward)} monedas.`);
+ updateHud();
+}
+function plantEgg(){
+ const e=player.carrying;if(!e)return;
+ if(player.inventory.length>=player.capacity){say('Inventario lleno.');return}
+ e.carried=false;e.timer=zones[e.zone].open;
+ player.inventory.push(e);eggs=eggs.filter(x=>x.id!==e.id);
+ resetBoss(e);player.carrying=null;
+ say('🌱 ¡Huevo plantado! Espera a que eclosione.');updateHud();
+}
+function updateBosses(dt){
+ for(const b of bosses){
+  if(!b.chasing)continue;
+  const e=player.carrying;
+  if(!e||e.id!==b.chasing){b.chasing=null;b.x=b.homeX;b.y=b.homeY;continue}
+  const dx=player.x-b.x,dy=player.y-b.y,d=Math.hypot(dx,dy)||1;
+  b.x+=dx/d*b.speed*dt*60;b.y+=dy/d*b.speed*dt*60;
+  if(player.x<=SAFE){deliverEgg();resetBoss(e);continue}
+  if(d<42){
+   player.x=SAFE-70;player.y=700;
+   player.carrying=null;e.carried=false;e.stolen=false;
+   e.x=zoneX(e.zone)+rand(100,1200);e.y=rand(250,850);
+   resetBoss(e);say('¡El jefe te alcanzó! El huevo volvió a su zona.');
+  }
+ }
+}
+function movePlayer(dt){
+ let dx=0,dy=0;
+ if(keys.KeyW||keys.ArrowUp)dy--;
+ if(keys.KeyS||keys.ArrowDown)dy++;
+ if(keys.KeyA||keys.ArrowLeft)dx--;
+ if(keys.KeyD||keys.ArrowRight)dx++;
+ if(dx&&dy){dx*=Math.SQRT1_2;dy*=Math.SQRT1_2}
+ const sprint=(keys.ShiftLeft||keys.ShiftRight)?1.5:1;
+ let nx=player.x+dx*player.speed*sprint*dt*60;
+ let ny=player.y+dy*player.speed*sprint*dt*60;
+ if(night&&nx>SAFE)nx=SAFE;
+ player.x=Math.max(45,Math.min(MAP_W-50,nx));
+ player.y=Math.max(150,Math.min(MAP_H-90,ny));
+}
+function updateInventory(dt){
+ for(const e of player.inventory){
+  if(e.timer>0){
+   e.timer-=dt;
+   if(e.timer<=0){
+    const z=zones[e.zone];
+    let name=z.creatures[Math.floor(Math.random()*z.creatures.length)];
+    if(e.zone===11)name=angelCycle[(day-1)%3];
+    creatures.push({
+     name,zone:e.zone,money:z.income,
+     x:GARDEN_X+rand(25,260),y:GARDEN_Y+rand(-45,55)
+    });
+    e.opened=true;
+    say(`¡Eclosionó ${name}! Produce ${fmt(z.income)} monedas por segundo.`);
+   }
+  }
+ }
+ player.inventory=player.inventory.filter(e=>!e.opened);
+}
+function updateEvents(now){
+ if(!night&&now-phaseStart>=DAY_MS){
+  night=true;phaseStart=now;
+  reiniciarHuevosDeNoche();
+ }else if(night&&now-phaseStart>=NIGHT_MS){
+  night=false;phaseStart=now;day++;
+  spawnSpecialEggs();
+  say('☀️ ¡Día '+day+'! Aparecieron los huevos especiales con aura.');
+ }
+}
+function updateIncome(now){
+ const seconds=Math.floor((now-lastIncome)/1000);
+ if(seconds<=0)return;
+ lastIncome+=seconds*1000;
+ let total=0;
+ for(const c of creatures)total+=c.money*seconds;
+ if(total)player.money+=total;
+}
+function updateHud(){
+ $('money').textContent=fmt(player.money);$('speed').textContent=fmt(player.power);
+ $('amount').textContent=fmt(amount());$('capacity').textContent=`${player.inventory.length+(player.carrying?1:0)}/${player.capacity}`;
+ $('day').textContent=day;
+ $('egginv').textContent=player.inventory.length?
+  player.inventory.map(e=>zones[e.zone].name+(e.special?' ✨':'')+' ('+Math.max(0,Math.ceil(e.timer))+'s)').join(' · '):'Vacío';
+ $('gardeninv').textContent=creatures.length?
+  creatures.map(c=>c.name+' ('+fmt(c.money)+'/s)').join(' · '):'Todavía no tienes criaturas.';
+ if(shopOpen)updateShop();
+}
+function drawText(t,x,y,size=16,color='#fff'){
+ ctx.font=`bold ${size}px Arial`;ctx.textAlign='center';ctx.fillStyle=color;ctx.fillText(t,x,y);
+}
+function drawEgg(e){
+ const x=e.x-cameraX;
+ if(x<-60||x>canvas.width+60)return;
+ const z=zones[e.zone];
+ if(e.special){
+  const g=ctx.createRadialGradient(x,e.y,2,x,e.y,55);
+  g.addColorStop(0,'#fffbd9');g.addColorStop(.3,'#ffe86bbb');g.addColorStop(1,'#ffe86b00');
+  ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,e.y,55,0,Math.PI*2);ctx.fill();
+ }
+ ctx.fillStyle=e.special?'#fff6a8':z.color;
+ ctx.beginPath();ctx.ellipse(x,e.y,17,23,0,0,Math.PI*2);ctx.fill();
+ ctx.strokeStyle=e.special?'#fff':'#ffffffaa';ctx.lineWidth=e.special?4:2;ctx.stroke();
+ drawText(e.special?'✨':'🥚',x,e.y+7,17);
+ drawText(e.special?'HUEVO ESPECIAL':z.name,x,e.y-31,11,e.special?'#fff4a0':'#fff');
+}
+function draw(){
+ const W=canvas.width,H=canvas.height;
+ ctx.clearRect(0,0,W,H);
+ const sky=ctx.createLinearGradient(0,0,0,H);
+ sky.addColorStop(0,night?'#07122b':'#65caff');
+ sky.addColorStop(1,night?'#1c2850':'#e2f8ff');
+ ctx.fillStyle=sky;ctx.fillRect(0,0,W,H);
+ if(night){
+  ctx.fillStyle='#fff3ad';ctx.beginPath();ctx.arc(W-80,65,25,0,Math.PI*2);ctx.fill();
+  for(let i=0;i<50;i++){ctx.fillStyle='#fff';ctx.fillRect((i*139)%W,(i*61)%190,2,2)}
+ }else{
+  ctx.fillStyle='#ffdf70';ctx.beginPath();ctx.arc(W-80,65,28,0,Math.PI*2);ctx.fill();
+ }
+ const ground=H*.23;ctx.fillStyle=night?'#173a34':'#55b84c';ctx.fillRect(0,ground,W,H-ground);
+ zones.forEach((z,i)=>{
+  const x=zoneX(i)-cameraX,w=1400;
+  if(x<W&&x+w>0){
+   ctx.fillStyle=z.color+'bb';ctx.fillRect(x,ground,w,H-ground);
+   ctx.fillStyle='#ffffff44';ctx.fillRect(x,ground,w,7);
+   drawText(z.name,x+w/2,ground+30,15);
+   drawText('Necesitas '+fmt(z.need),x+w/2,ground+50,12);
+  }
+ });
+ const sx=SAFE-cameraX;ctx.fillStyle='#fff';ctx.fillRect(sx-4,ground,8,H-ground);
+ drawText('ZONA SEGURA',sx,ground+75,14);
+
+ const bx=250-cameraX;
+ ctx.fillStyle='#704626';ctx.fillRect(bx-100,GARDEN_Y-95,200,125);
+ ctx.fillStyle='#c98b50';ctx.beginPath();ctx.moveTo(bx-120,GARDEN_Y-95);ctx.lineTo(bx,GARDEN_Y-165);ctx.lineTo(bx+120,GARDEN_Y-95);ctx.fill();
+ drawText('🏠 BASE',bx,GARDEN_Y-174,18);
+
+ const gx=GARDEN_X-cameraX;
+ ctx.fillStyle='#287b36';ctx.fillRect(gx-15,GARDEN_Y-50,300,115);
+ ctx.strokeStyle='#e7c17a';ctx.lineWidth=6;ctx.strokeRect(gx-15,GARDEN_Y-50,300,115);
+ drawText('🌱 JARDÍN',gx+135,GARDEN_Y-61,17);
+ for(const c of creatures){
+  const x=c.x-cameraX;
+  if(x>-30&&x<W+30){drawText('🐾',x,c.y,22);drawText(c.name,x,c.y+22,10)}
+ }
+ 
+ const tx=GARDEN_X+420-cameraX,ty=GARDEN_Y+8;
+ ctx.fillStyle='#222c3d';ctx.fillRect(tx-58,ty-23,116,46);
+ ctx.fillStyle='#697b8e';ctx.fillRect(tx-48,ty-14,96,28);
+ for(let i=0;i<7;i++){ctx.fillStyle='#e0e6ef';ctx.fillRect(tx-42+i*14,ty-9,5,18)}
+ ctx.strokeStyle='#ffd45c';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(tx+38,ty-18);ctx.lineTo(tx+38,ty-61);ctx.lineTo(tx+5,ty-61);ctx.stroke();
+ ctx.fillStyle='#7be3ff';ctx.fillRect(tx+1,ty-72,35,16);
+ drawText('TIENDA',tx,ty-82,13);drawText('B: comprar',tx,ty+52,12);
+
+ for(const e of eggs)if(!e.carried)drawEgg(e);
+ for(const b of bosses){
+  const x=b.x-cameraX;
+  if(x>-60&&x<W+60){drawText(zones[b.zone].boss,x,b.y,32);drawText('JEFE',x,b.y+23,10)}
+ }
+ const px=player.x-cameraX;
+ drawText('🧑',px,player.y,30);
+ if(player.carrying){
+  drawText('🥚',px+23,player.y-23,19);
+  if(player.carrying.special)drawText('✨',px+35,player.y-39,15);
+ }
+ if(night){
+  ctx.fillStyle='#0006';ctx.fillRect(0,0,W,H);
+  drawText('🌙 NOCHE: NO PUEDES ENTRAR A LAS ZONAS',W/2,110,19);
+ }
+ if(nearBase()||nearTreadmill())drawText('Presiona B para comprar mejoras',Math.max(180,Math.min(W-180,px)),H-22,14);
+}
+function loop(now){
+ const dt=Math.min(.04,(now-(loop.last||now))/1000);loop.last=now;
+ if(!shopOpen){
+  movePlayer(dt);updateBosses(dt);
+  if(player.carrying&&player.x<=SAFE)deliverEgg();
+  updateInventory(dt);updateEvents(Date.now());updateIncome(Date.now());
+ }
+ cameraX=Math.max(0,Math.min(MAP_W-canvas.width,player.x-canvas.width*.38));
+ draw();updateHud();
+ const elapsed=Date.now()-phaseStart;
+ $('time').textContent=Math.max(0,Math.ceil(((night?NIGHT_MS:DAY_MS)-elapsed)/1000));
+ requestAnimationFrame(loop);
+}
+window.addEventListener('keydown',e=>{
+ keys[e.code]=true;
+ if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code))e.preventDefault();
+ if(e.repeat)return;
+ if(e.code==='KeyE')interact();
+ if(e.code==='KeyB')openShop();
+});
+window.addEventListener('keyup',e=>keys[e.code]=false);
+window.addEventListener('blur',()=>keys={});
+
+createWorld();updateHud();requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
