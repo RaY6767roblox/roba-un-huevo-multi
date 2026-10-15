@@ -3,7 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Roba un Huevo - 14 Zonas</title>
+<title>Roba un Huevo - 14 Zonas Multijugador</title>
+<!-- Librería de Socket.IO -->
+<script src="/socket.io/socket.io.js"></script>
 <style>
 *{box-sizing:border-box}
 body{margin:0;background:#101827;color:white;font-family:Arial,sans-serif}
@@ -63,6 +65,29 @@ Tu velocidad al caminar se mantiene cómoda para no teletransportarte, pero tus 
 
 <script>
 (()=>{
+const socket = io();
+let otherPlayers = {};
+
+socket.on('currentPlayers', (players) => {
+  otherPlayers = players;
+  delete otherPlayers[socket.id];
+});
+
+socket.on('newPlayer', (playerInfo) => {
+  otherPlayers[playerInfo.id] = playerInfo;
+});
+
+socket.on('playerMoved', (playerInfo) => {
+  if (otherPlayers[playerInfo.id]) {
+    otherPlayers[playerInfo.id].x = playerInfo.x;
+    otherPlayers[playerInfo.id].z = playerInfo.z;
+  }
+});
+
+socket.on('disconnectPlayer', (id) => {
+  delete otherPlayers[id];
+});
+
 const canvas=document.getElementById('game');
 const ctx=canvas.getContext('2d');
 const $=id=>document.getElementById(id);
@@ -184,7 +209,6 @@ document.getElementById('buySpeed').onclick = function () {
   player.money -= cost;
   player.power += increase;
   
-  // Mantiene la velocidad de movimiento física suave y controlada
   player.speed = Math.min(22, 10 + Math.floor(Math.log10(player.power + 1) * 2));
 
   if(player.power >= 100000 && player.power - increase < 100000){
@@ -318,6 +342,8 @@ function movePlayer(dt){
  if(night&&nx>SAFE)nx=SAFE;
  player.x=Math.max(45,Math.min(MAP_W-50,nx));
  player.y=Math.max(150,Math.min(MAP_H-90,ny));
+
+ socket.emit('playerMovement', { x: player.x, z: player.y });
 }
 function updateInventory(dt){
  for(const e of player.inventory){
@@ -437,6 +463,16 @@ function draw(){
   const x=b.x-cameraX;
   if(x>-60&&x<W+60){drawText(zones[b.zone].boss,x,b.y,32);drawText('JEFE',x,b.y+23,10)}
  }
+
+ for (const id in otherPlayers) {
+  const p = otherPlayers[id];
+  const px = p.x - cameraX;
+  if (px > -50 && px < canvas.width + 50) {
+   drawText('🧑', px, p.z, 30);
+   drawText('Jugador', px, p.z - 20, 11, '#ffd45c');
+  }
+ }
+
  const px=player.x-cameraX;
  drawText('🧑',px,player.y,30);
  if(player.carrying){
