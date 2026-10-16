@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Roba un Huevo - 14 Zonas Multijugador</title>
+<title>Roba un Huevo - Zonas Extremas Multijugador</title>
 <!-- Librería de Socket.IO -->
 <script src="/socket.io/socket.io.js"></script>
 <style>
@@ -25,7 +25,7 @@ button:disabled{opacity:.5;cursor:default}
 </head>
 <body>
 <header>
-  <h1>🥚 Roba un Huevo — 14 Zonas</h1>
+  <h1>🥚 Roba un Huevo — Zonas Extremas</h1>
   <div id="stats">
     <span>🪙 <b id="money">100</b></span>
     <span>⚡ Velocidad: <b id="speed">10</b></span>
@@ -38,7 +38,7 @@ button:disabled{opacity:.5;cursor:default}
 
 <div id="help">
 <b>WASD / flechas:</b> moverte · <b>SHIFT:</b> correr · <b>E:</b> robar o plantar huevo · <b>B:</b> tienda cerca de la base.
-Tu velocidad al caminar se mantiene cómoda para no teletransportarte, pero tus mejoras te dan el poder necesario para robar en zonas altas.
+¡Prepárate para las nuevas zonas extremas hasta llegar al Trillón de poder!
 </div>
 
 <div id="gameWrap">
@@ -54,7 +54,7 @@ Tu velocidad al caminar se mantiene cómoda para no teletransportarte, pero tus 
 <hr>
 <button id="buyCapacity">🎒 Ampliar capacidad</button>
 <button id="closeShop">Cerrar tienda</button>
-<p class="small">Escala automática:<br>• 100 en 100 (Inicio)<br>• 1.000 en 1.000 (Desde 10.000)<br>• 10.000 en 10.000 (Desde 25.000)<br>• 100.000 en 100.000 (Desde 100.000)</p>
+<p class="small">Escala automática:<br>• 100 en 100 (Inicio)<br>• 1.000 en 1.000 (Desde 10.000)<br>• 10.000 en 10.000 (Desde 25.000)<br>• 100.000 en 100.000 (Desde 100.000)<br>• 1M en 1M (Desde 3M)<br>• 10M en 10M (Desde 10M)<br>• 100M en 100M (Desde 100M)<br>• 1B en 1B (Desde 1B)<br>• 10B en 10B (Desde 10B)<br>• 100B en 100B (Desde 100B)</p>
 </div>
 </div>
 
@@ -93,7 +93,7 @@ const ctx=canvas.getContext('2d');
 const $=id=>document.getElementById(id);
 
 const SAFE=750, GARDEN_X=350, GARDEN_Y=700;
-const MAP_W=22000, MAP_H=1000;
+const MAP_W=45000, MAP_H=1000;
 const DAY_MS=60000, NIGHT_MS=10000;
 
 const zones=[
@@ -110,13 +110,28 @@ const zones=[
  {name:'Templo del Titán',need:100000,color:'#9e8876',boss:'🗿',open:85,reward:50000,income:7500,creatures:['Titán antiguo','Coloso de piedra','Guardián del templo']},
  {name:'Angels and Demons',need:250000,color:'#a28bff',boss:'😇',open:95,reward:100000,income:10000,creatures:['Ángel','Demonio','Ángeles y Demonios']},
  {name:'Bosque Encantado',need:500000,color:'#269b88',boss:'🧚',open:110,reward:200000,income:25000,creatures:['Hada antigua','Árbol consciente','Dragón encantado']},
- {name:'Zona Admin',need:2500000,color:'#e8d73d',boss:'👑',open:120,reward:1000000,income:60000,creatures:['Admin dorado','Dios del código','Entidad suprema']}
+ {name:'Zona Admin',need:2500000,color:'#e8d73d',boss:'👑',open:120,reward:1000000,income:60000,creatures:['Admin dorado','Dios del código','Entidad suprema']},
+ // Nuevas zonas extremas solicitadas
+ {name:'Dimensión Cuántica',need:5000000,color:'#3b82f6',boss:'⚛️',open:130,reward:2500000,income:150000,creatures:['Átomo viviente','Quark veloz','Partícula alfa']},
+ {name:'Núcleo de Plasma',need:10000000,color:'#ef4444',boss:'🔥',open:140,reward:5000000,income:350000,creatures:['Bestia de plasma','Fuego estelar','Supernova']},
+ {name:'Reino Galáctico',need:50000000,color:'#8b5cf6',boss:'🪐',open:150,reward:25000000,income:1000000,creatures:['Señor de los anillos','Titán estelar','Cometa alfa']},
+ {name:'Cúmulo de Estrellas',need:250000000,color:'#ec4899',boss:'🌟',open:160,reward:120000000,income:4000000,creatures:['Estrella fugaz','Nebulosa viva','Guardián de polvo']},
+ {name:'Horizonte de Eventos',need:500000000,color:'#1e1b4b',boss:'🕳️',open:170,reward:250000000,income:10000000,creatures:['Monstruo de agujero','Sombra cósmica','Devorador de luz']},
+ {name:'Multiverso Oscuro',need:1000000000,color:'#0f172a',boss:'🌌',open:180,reward:500000000,income:25000000,creatures:['Entidad oscura','Espejo dimensional','Dios caótico']},
+ {name:'Dimensión Alfa',need:2500000000,color:'#14b8a6',boss:'⚡',open:190,reward:1200000000,income:60000000,creatures:['Titán alfa','Rayo perpetuo','Señor veloz']},
+ {name:'Imperio Celestial',need:5000000000,color:'#facc15',boss:'☀️',open:200,reward:2500000000,income:150000000,creatures:['Arcángel solar','Dios del sol','Fénix celestial']},
+ {name:'Torre de los Dioses',need:10000000000,color:'#fb923c',boss:'🏛️',open:210,reward:5000000000,income:350000000,creatures:['Sacerdote divino','Guardián supremo','Estatua sagrada']},
+ {name:'Eternidad Pura',need:25000000000,color:'#a855f7',boss:'⏳',open:220,reward:12000000000,income:800000000,creatures:['Señor del tiempo','Espejismo eterno','Cronos']},
+ {name:'Dimensión Omega',need:100000000000,color:'#dc2626',boss:'🛑',open:230,reward:50000000000,income:2000000000,creatures:['Devorador omega','Centinela final','Destructor']},
+ {name:'Reino del Caos',need:250000000000,color:'#4338ca',boss:'🌀',open:240,reward:120000000000,income:5000000000,creatures:['Entidad caótica','Vórtice infinito','Señor del desorden']},
+ {name:'Infinito Absoluto',need:500000000000,color:'#0284c7',boss:'♾️',open:250,reward:250000000000,income:12000000000,creatures:['Guardián infinito','Esencia pura','Avatar supremo']},
+ {name:'El Trillón',need:1000000000000,color:'#ffffff',boss:'👑',open:260,reward:600000000000,income:30000000000,creatures:['Dios del Trillón','Entidad Primigenia','Creador del Todo']}
 ];
 
-const specialZones=[9,10,11,12,13];
+const specialZones=[9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27];
 const angelCycle=['Ángel','Demonio','Ángeles y Demonios'];
 
-let player={x:250,y:700,speed:10,power:10,money:1000000,capacity:5,inventory:[],carrying:null};
+let player={x:250,y:700,speed:10,power:10,money:1000000000,capacity:5,inventory:[],carrying:null};
 let eggs=[],bosses=[],creatures=[],keys={};
 let cameraX=0,night=false,day=1,phaseStart=Date.now(),lastIncome=Date.now();
 let shopOpen=false,messageTimer=null;
@@ -126,6 +141,12 @@ const fmt=n=>Math.floor(n).toLocaleString('es-EC');
 const zoneX=i=>1000+i*1450;
 
 function amount(){
+ if(player.power>=100000000000) return 100000000000;
+ if(player.power>=10000000000) return 10000000000;
+ if(player.power>=1000000000) return 1000000000;
+ if(player.power>=100000000) return 100000000;
+ if(player.power>=10000000) return 10000000;
+ if(player.power>=3000000) return 1000000;
  if(player.power>=100000) return 100000;
  if(player.power>=25000) return 10000;
  if(player.power>=10000) return 1000;
@@ -156,7 +177,7 @@ function createWorld(){
   bosses.push({
    zone:i,x:zoneX(i)+720,y:800,
    homeX:zoneX(i)+720,homeY:800,
-   speed:Math.min(6, 2 + i * 0.3),chasing:null
+   speed:Math.min(6, 2 + i * 0.2),chasing:null
   });
  });
  spawnSpecialEggs();
@@ -209,14 +230,20 @@ document.getElementById('buySpeed').onclick = function () {
   player.money -= cost;
   player.power += increase;
   
-  player.speed = Math.min(22, 10 + Math.floor(Math.log10(player.power + 1) * 2));
+  player.speed = Math.min(22, 10 + Math.floor(Math.log10(player.power + 1) * 1.5));
 
-  if(player.power >= 100000 && player.power - increase < 100000){
-    say('👑 ¡Poder de 100.000 alcanzado! Ahora compras de 100.000 en 100.000.');
-  } else if(player.power >= 25000 && player.power - increase < 25000){
-    say('⭐ ¡Poder de 25.000 alcanzado! Ahora compras de 10.000 en 10.000.');
-  } else if(player.power >= 10000 && player.power - increase < 10000){
-    say('🚀 ¡Poder de 10.000 alcanzado! Ahora compras de 1.000 en 1.000.');
+  if(player.power >= 100000000000 && player.power - increase < 100000000000){
+    say('👑 ¡Poder de 100B alcanzado! Ahora compras de 100B en 100B.');
+  } else if(player.power >= 10000000000 && player.power - increase < 10000000000){
+    say('⭐ ¡Poder de 10B alcanzado! Ahora compras de 10B en 10B.');
+  } else if(player.power >= 1000000000 && player.power - increase < 1000000000){
+    say('🚀 ¡Poder de 1B alcanzado! Ahora compras de 1B en 1B.');
+  } else if(player.power >= 100000000 && player.power - increase < 100000000){
+    say('🔥 ¡Poder de 100M alcanzado! Ahora compras de 100M en 100M.');
+  } else if(player.power >= 10000000 && player.power - increase < 10000000){
+    say('⚡ ¡Poder de 10M alcanzado! Ahora compras de 10M en 10M.');
+  } else if(player.power >= 3000000 && player.power - increase < 3000000){
+    say('🌟 ¡Poder de 3M alcanzado! Ahora compras de 1M en 1M.');
   } else {
     say('¡Compraste +' + fmt(increase) + ' de poder de robo!');
   }
