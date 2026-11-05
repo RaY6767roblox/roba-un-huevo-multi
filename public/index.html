@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Roba un Huevo - Zonas Extremas con Guardado</title>
+<title>Roba un Huevo - Escala Multiversal</title>
 <!-- Librería de Socket.IO -->
 <script src="/socket.io/socket.io.js"></script>
 <style>
@@ -25,7 +25,7 @@ button:disabled{opacity:.5;cursor:default}
 </head>
 <body>
 <header>
-  <h1>🥚 Roba un Huevo — Zonas Extremas</h1>
+  <h1>🥚 Roba un Huevo — Escala Multiversal</h1>
   <div id="stats">
     <span>🪙 <b id="money">100</b></span>
     <span>⚡ Velocidad: <b id="speed">10</b></span>
@@ -38,7 +38,7 @@ button:disabled{opacity:.5;cursor:default}
 
 <div id="help">
 <b>WASD / flechas:</b> moverte · <b>SHIFT:</b> correr · <b>E:</b> robar o plantar huevo · <b>B:</b> tienda cerca de la base.
-¡Tu progreso y ganancias pasivas se guardan automáticamente al salir!
+¡Alcanza la cima absoluta desde los Trillones hasta el Quintillón de poder!
 </div>
 
 <div id="gameWrap">
@@ -54,7 +54,7 @@ button:disabled{opacity:.5;cursor:default}
 <hr>
 <button id="buyCapacity">🎒 Ampliar capacidad</button>
 <button id="closeShop">Cerrar tienda</button>
-<p class="small">Escala automática:<br>• 100 en 100 (Inicio)<br>• 1.000 en 1.000 (Desde 10.000)<br>• 10.000 en 10.000 (Desde 25.000)<br>• 100.000 en 100.000 (Desde 100.000)<br>• 1M en 1M (Desde 3M)<br>• 10M en 10M (Desde 10M)<br>• 100M en 100M (Desde 100M)<br>• 1B en 1B (Desde 1B)<br>• 10B en 10B (Desde 10B)<br>• 100B en 100B (Desde 100B)</p>
+<p class="small">Escala automática:<br>• Hasta 100B en 100B<br>• 1T en 1T (Desde 1T)<br>• 10T en 10T (Desde 10T)<br>• 100T en 100T (Desde 100T)<br>• 1QA en 1QA (Desde 1QA)<br>• 10QA en 10QA (Desde 10QA)<br>• 100QA en 100QA (Desde 100QA)</p>
 </div>
 </div>
 
@@ -93,7 +93,7 @@ const ctx=canvas.getContext('2d');
 const $=id=>document.getElementById(id);
 
 const SAFE=750, GARDEN_X=350, GARDEN_Y=700;
-const MAP_W=45000, MAP_H=1000;
+const MAP_W=70000, MAP_H=1000;
 const DAY_MS=60000, NIGHT_MS=10000;
 
 const zones=[
@@ -124,10 +124,30 @@ const zones=[
  {name:'Dimensión Omega',need:100000000000,color:'#dc2626',boss:'🛑',open:230,reward:50000000000,income:2000000000,creatures:['Devorador omega','Centinela final','Destructor']},
  {name:'Reino del Caos',need:250000000000,color:'#4338ca',boss:'🌀',open:240,reward:120000000000,income:5000000000,creatures:['Entidad caótica','Vórtice infinito','Señor del desorden']},
  {name:'Infinito Absoluto',need:500000000000,color:'#0284c7',boss:'♾️',open:250,reward:250000000000,income:12000000000,creatures:['Guardián infinito','Esencia pura','Avatar supremo']},
- {name:'El Trillón',need:1000000000000,color:'#ffffff',boss:'👑',open:260,reward:600000000000,income:30000000000,creatures:['Dios del Trillón','Entidad Primigenia','Creador del Todo']}
+ {name:'El Trillón',need:1000000000000,color:'#ffffff',boss:'👑',open:260,reward:600000000000,income:30000000000,creatures:['Dios del Trillón','Entidad Primigenia','Creador del Todo']},
+
+ // NUEVAS ZONAS SOLICITADAS (Trillones, Cuadrillones, Quintillón)
+ {name:'Vórtice Cósmico',need:2500000000000,color:'#6366f1',boss:'🌀',open:270,reward:1200000000000,income:60000000000,creatures:['Espíritu del Vórtice','Onda Relámpago']},
+ {name:'Furia Solar',need:5000000000000,color:'#f97316',boss:'☀️',open:280,reward:2500000000000,income:130000000000,creatures:['Llamarada Solar','Fénix de Fuego']},
+ {name:'Abismo de Sombras',need:10000000000000,color:'#334155',boss:'🌑',open:290,reward:5000000000000,income:280000000000,creatures:['Sombra Ancestral','Devorador de Almas']},
+ {name:'Reino Cristalino',need:25000000000000,color:'#38bdf8',boss:'💎',open:300,reward:12000000000000,income:650000000000,creatures:['Gólem de Diamante','Dragón de Cristal']},
+ {name:'Constelación Suprema',need:50000000000000,color:'#e879f9',boss:'✨',open:310,reward:25000000000000,income:1400000000000,creatures:['Guardián Estelar','Cuerpo Celeste']},
+ {name:'Núcleo Divino',need:100000000000000,color:'#facc15',boss:'⚡',open:320,reward:50000000000000,income:3000000000000,creatures:['Titán Divino','Rayo de Luz']},
+ {name:'Dimensión Astral',need:250000000000000,color:'#a855f7',boss:'🔮',open:330,reward:120000000000000,income:7000000000000,creatures:['Viajero Astral','Espejismo Místico']},
+ {name:'Luz Eterna',need:500000000000000,color:'#fef08a',boss:'🕯️',open:340,reward:250000000000000,income:15000000000000,creatures:['Ser de Luz','Ángel Luminoso']},
+ {name:'El Cuadrillón',need:1000000000000000,color:'#22c55e',boss:'👑',open:350,reward:500000000000000,income:32000000000000,creatures:['Dios Cuadrillón','Señor Supremo']},
+ {name:'Hiperespacio',need:2500000000000000,color:'#06b6d4',boss:'🚀',open:360,reward:1200000000000000,income:75000000000000,creatures:['Nave Estelar','Velocidad Luz']},
+ {name:'Matriz Cuántica',need:5000000000000000,color:'#ec4899',boss:'💻',open:370,reward:2500000000000000,income:160000000000000,creatures:['Hacker del Espacio','Código Viviente']},
+ {name:'Valle de Titanes',need:10000000000000000,color:'#78350f',boss:'🛡️',open:380,reward:5000000000000000,income:350000000000000,creatures:['Titán Legendario','Coloso de Hierro']},
+ {name:'Energía Pura',need:25000000000000000,color:'#10b981',boss:'🔋',open:390,reward:12000000000000000,income:800000000000000,creatures:['Orbe de Poder','Chispa Infinita']},
+ {name:'Horizonte Alfa',need:50000000000000000,color:'#f43f5e',boss:'🌅',open:400,reward:25000000000000000,income:1800000000000000,creatures:['Sol Naciente','Amanecer Estelar']},
+ {name:'Templo Primigenio',need:100000000000000000,color:'#fbbf24',boss:'⛩️',open:410,reward:50000000000000000,income:4000000000000000,creatures:['Maestro Antiguo','Espíritu Sagrado']},
+ {name:'Dimensión Secreta',need:250000000000000000,color:'#64748b',boss:'🗝️',open:420,reward:120000000000000000,income:9000000000000000,creatures:['Guardián de la Llave','Sombra Oculta']},
+ {name:'Cima del Infinito',need:500000000000000000,color:'#c084fc',boss:'🏔️',open:430,reward:250000000000000000,income:20000000000000000,creatures:['Espíritu de las Alturas','Dios de la Cumbre']},
+ {name:'El Quintillón Supreme',need:1000000000000000000,color:'#ffffff',boss:'💎',open:440,reward:500000000000000000,income:50000000000000000,creatures:['Dios Quintillón','Creador Absoluto','Entidad Omnipotente']}
 ];
 
-const specialZones=[9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27];
+const specialZones=[9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45];
 const angelCycle=['Ángel','Demonio','Ángeles y Demonios'];
 
 let player={x:250,y:700,speed:10,power:10,money:1000,capacity:5,inventory:[],carrying:null};
@@ -135,9 +155,8 @@ let eggs=[],bosses=[],creatures=[],keys={};
 let cameraX=0,night=false,day=1,phaseStart=Date.now(),lastIncome=Date.now();
 let shopOpen=false,messageTimer=null;
 
-// Cargar partida guardada si existe
 function loadGame(){
-  const saved=localStorage.getItem('robaHuevoSave_v2');
+  const saved=localStorage.getItem('robaHuevoSave_v3');
   if(saved){
     try{
       const data=JSON.parse(saved);
@@ -149,14 +168,13 @@ function loadGame(){
       creatures=data.creatures??[];
       day=data.day??1;
       
-      // Calcular ganancias offline si tenía criaturas
       if(data.lastTime && creatures.length>0){
         const secondsOffline=Math.floor((Date.now()-data.lastTime)/1000);
         if(secondsOffline>5){
           let offlineEarned=0;
           for(const c of creatures) offlineEarned+=(c.money*secondsOffline);
           player.money+=offlineEarned;
-          setTimeout(()=>say(`💰 ¡Bienvenido de nuevo! Ganaste ${fmt(offlineEarned)} monedas mientrasestabas fuera.`), 1500);
+          setTimeout(()=>say(`💰 ¡Bienvenido de nuevo! Ganaste ${fmt(offlineEarned)} monedas mientras estabas fuera.`), 1500);
         }
       }
     }catch(e){console.error('Error al cargar partida', e);}
@@ -174,14 +192,27 @@ function saveGame(){
     day:day,
     lastTime:Date.now()
   };
-  localStorage.setItem('robaHuevoSave_v2', JSON.stringify(data));
+  localStorage.setItem('robaHuevoSave_v3', JSON.stringify(data));
 }
 
 const rand=(a,b)=>a+Math.random()*(b-a);
-const fmt=n=>Math.floor(n).toLocaleString('es-EC');
+const fmt=n=>{
+  if(n>=1e18) return (n/1e18).toFixed(2)+' Qi';
+  if(n>=1e15) return (n/1e15).toFixed(2)+' Qa';
+  if(n>=1e12) return (n/1e12).toFixed(2)+' T';
+  if(n>=1e9) return (n/1e9).toFixed(2)+' B';
+  if(n>=1e6) return (n/1e6).toFixed(2)+' M';
+  return Math.floor(n).toLocaleString('es-EC');
+};
 const zoneX=i=>1000+i*1450;
 
 function amount(){
+ if(player.power>=100000000000000000) return 100000000000000000; // 100 QA
+ if(player.power>=10000000000000000) return 10000000000000000;   // 10 QA
+ if(player.power>=1000000000000000) return 1000000000000000;     // 1 QA
+ if(player.power>=100000000000000) return 100000000000000;       // 100 T
+ if(player.power>=10000000000000) return 10000000000000;         // 10 T
+ if(player.power>=1000000000000) return 1000000000000;           // 1 T
  if(player.power>=100000000000) return 100000000000;
  if(player.power>=10000000000) return 10000000000;
  if(player.power>=1000000000) return 1000000000;
@@ -218,7 +249,7 @@ function createWorld(){
   bosses.push({
    zone:i,x:zoneX(i)+720,y:800,
    homeX:zoneX(i)+720,homeY:800,
-   speed:Math.min(6, 2 + i * 0.2),chasing:null
+   speed:Math.min(6, 2 + i * 0.15),chasing:null
   });
  });
  spawnSpecialEggs();
@@ -271,20 +302,20 @@ document.getElementById('buySpeed').onclick = function () {
   player.money -= cost;
   player.power += increase;
   
-  player.speed = Math.min(22, 10 + Math.floor(Math.log10(player.power + 1) * 1.5));
+  player.speed = Math.min(22, 10 + Math.floor(Math.log10(player.power + 1) * 1.2));
 
-  if(player.power >= 100000000000 && player.power - increase < 100000000000){
-    say('👑 ¡Poder de 100B alcanzado! Ahora compras de 100B en 100B.');
-  } else if(player.power >= 10000000000 && player.power - increase < 10000000000){
-    say('⭐ ¡Poder de 10B alcanzado! Ahora compras de 10B en 10B.');
-  } else if(player.power >= 1000000000 && player.power - increase < 1000000000){
-    say('🚀 ¡Poder de 1B alcanzado! Ahora compras de 1B en 1B.');
-  } else if(player.power >= 100000000 && player.power - increase < 100000000){
-    say('🔥 ¡Poder de 100M alcanzado! Ahora compras de 100M en 100M.');
-  } else if(player.power >= 10000000 && player.power - increase < 10000000){
-    say('⚡ ¡Poder de 10M alcanzado! Ahora compras de 10M en 10M.');
-  } else if(player.power >= 3000000 && player.power - increase < 3000000){
-    say('🌟 ¡Poder de 3M alcanzado! Ahora compras de 1M en 1M.');
+  if(player.power >= 100000000000000000 && player.power - increase < 100000000000000000){
+    say('👑 ¡Poder de 100QA alcanzado! Ahora compras de 100QA en 100QA.');
+  } else if(player.power >= 10000000000000000 && player.power - increase < 10000000000000000){
+    say('⭐ ¡Poder de 10QA alcanzado! Ahora compras de 10QA en 10QA.');
+  } else if(player.power >= 1000000000000000 && player.power - increase < 1000000000000000){
+    say('🚀 ¡Poder de 1QA alcanzado! Ahora compras de 1QA en 1QA.');
+  } else if(player.power >= 100000000000000 && player.power - increase < 100000000000000){
+    say('🔥 ¡Poder de 100T alcanzado! Ahora compras de 100T en 100T.');
+  } else if(player.power >= 10000000000000 && player.power - increase < 10000000000000){
+    say('⚡ ¡Poder de 10T alcanzado! Ahora compras de 10T en 10T.');
+  } else if(player.power >= 1000000000000 && player.power - increase < 1000000000000){
+    say('🌟 ¡Poder de 1T alcanzado! Ahora compras de 1T en 1T.');
   } else {
     say('¡Compraste +' + fmt(increase) + ' de poder de robo!');
   }
@@ -460,10 +491,6 @@ function updateHud(){
  $('egginv').textContent=player.inventory.length?
   player.inventory.map(e=>zones[e.zone].name+(e.special?' ✨':'')+' ('+Math.max(0,Math.ceil(e.timer))+'s)').join(' · '):'Vacío';
  
- // Calcular ganancia total por segundo del jardín
- let totalIncomePerSec = 0;
- for(const c of creatures) totalIncomePerSec += c.money;
- 
  $('gardeninv').textContent=creatures.length?
   creatures.map(c=>c.name+' ('+fmt(c.money)+'/s)').join(' · '):'Todavía no tienes criaturas.';
  if(shopOpen)updateShop();
@@ -522,7 +549,6 @@ function draw(){
  ctx.strokeStyle='#e7c17a';ctx.lineWidth=6;ctx.strokeRect(gx-15,GARDEN_Y-50,300,115);
  drawText('🌱 JARDÍN',gx+135,GARDEN_Y-61,17);
  
- // Mostrar ganancia total por segundo arriba del jardín
  let totalIncomePerSec = 0;
  for(const c of creatures) totalIncomePerSec += c.money;
  if(creatures.length > 0) {
@@ -592,7 +618,6 @@ window.addEventListener('keydown',e=>{
 window.addEventListener('keyup',e=>keys[e.code]=false);
 window.addEventListener('blur',()=>keys={});
 
-// Guardar cada 30 segundos automáticamente por seguridad
 setInterval(saveGame, 30000);
 
 loadGame();
