@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Roba un Huevo - Escala Multiversal</title>
+<title>Roba un Huevo - Login Roblox Style</title>
 <!-- Librería de Socket.IO -->
 <script src="/socket.io/socket.io.js"></script>
 <style>
@@ -21,11 +21,43 @@ button{background:#ffd45c;color:#172338;border:0;border-radius:7px;padding:10px;
 button:disabled{opacity:.5;cursor:default}
 #gameWrap{position:relative}
 .small{font-size:12px;color:#cbd5e1}
+
+/* Pantalla de Inicio / Login tipo Roblox */
+#authScreen{position:fixed;top:0;left:0;width:100vw;height:100vh;background:linear-gradient(135deg, #0f172a, #1e293b);z-index:1000;display:flex;justify-content:center;align-items:center}
+.auth-box{background:#172338;border:2px solid #ffd45c;border-radius:16px;padding:30px;width:min(400px, 90vw);box-shadow:0 10px 40px rgba(0,0,0,0.6);text-align:center}
+.auth-box h2{margin-top:0;color:#ffd45c}
+.auth-box input{width:100%;padding:12px;margin:10px 0;background:#0f172a;border:1px solid #334155;color:white;border-radius:8px;font-size:15px}
+.auth-box button{width:100%;padding:12px;margin-top:10px;background:#ffd45c;color:#172338;font-weight:bold;border-radius:8px;cursor:pointer;font-size:16px}
+.auth-toggle{margin-top:15px;font-size:13px;color:#94a3b8;cursor:pointer}
+.auth-toggle span{color:#ffd45c;text-decoration:underline}
+.error-msg{color:#f87171;font-size:13px;margin:5px 0}
 </style>
 </head>
 <body>
+
+<!-- PANTALLA DE INICIO / REGISTRO TIPO ROBLOX -->
+<div id="authScreen">
+  <div class="auth-box">
+    <h2 id="authTitle">🎮 Iniciar Sesión</h2>
+    <div id="loginForm">
+      <input type="text" id="loginUser" placeholder="Nombre de usuario">
+      <input type="password" id="loginPass" placeholder="Contraseña">
+      <div id="loginError" class="error-msg"></div>
+      <button onclick="tryLogin()">Entrar al Juego</button>
+      <div class="auth-toggle" onclick="toggleAuthMode()">¿No tienes cuenta? <span>Regístrate aquí</span></div>
+    </div>
+    <div id="registerForm" style="display:none;">
+      <input type="text" id="regUser" placeholder="Elige un usuario">
+      <input type="password" id="regPass" placeholder="Elige una contraseña">
+      <div id="regError" class="error-msg"></div>
+      <button onclick="tryRegister()">Crear Cuenta</button>
+      <div class="auth-toggle" onclick="toggleAuthMode()">¿Ya tienes cuenta? <span>Inicia sesión</span></div>
+    </div>
+  </div>
+</div>
+
 <header>
-  <h1>🥚 Roba un Huevo — Escala Multiversal</h1>
+  <h1>🥚 Roba un Huevo — Multiversal con Cuentas</h1>
   <div id="stats">
     <span>🪙 <b id="money">100</b></span>
     <span>⚡ Velocidad: <b id="speed">10</b></span>
@@ -38,7 +70,6 @@ button:disabled{opacity:.5;cursor:default}
 
 <div id="help">
 <b>WASD / flechas:</b> moverte · <b>SHIFT:</b> correr · <b>E:</b> robar o plantar huevo · <b>B:</b> tienda cerca de la base.
-¡Alcanza la cima absoluta desde los Trillones hasta el Quintillón de poder!
 </div>
 
 <div id="gameWrap">
@@ -54,7 +85,6 @@ button:disabled{opacity:.5;cursor:default}
 <hr>
 <button id="buyCapacity">🎒 Ampliar capacidad</button>
 <button id="closeShop">Cerrar tienda</button>
-<p class="small">Escala automática:<br>• Hasta 100B en 100B<br>• 1T en 1T (Desde 1T)<br>• 10T en 10T (Desde 10T)<br>• 100T en 100T (Desde 100T)<br>• 1QA en 1QA (Desde 1QA)<br>• 10QA en 10QA (Desde 10QA)<br>• 100QA en 100QA (Desde 100QA)</p>
 </div>
 </div>
 
@@ -64,567 +94,550 @@ button:disabled{opacity:.5;cursor:default}
 </div>
 
 <script>
-(()=>{
-const socket = io();
-let otherPlayers = {};
+let socket;
+let currentUser = null;
 
-socket.on('currentPlayers', (players) => {
-  otherPlayers = players;
-  delete otherPlayers[socket.id];
-});
+function toggleAuthMode() {
+  const isLogin = document.getElementById('loginForm').style.display !== 'none';
+  document.getElementById('loginForm').style.display = isLogin ? 'none' : 'block';
+  document.getElementById('registerForm').style.display = isLogin ? 'block' : 'none';
+  document.getElementById('authTitle').textContent = isLogin ? '✨ Crear Cuenta' : '🎮 Iniciar Sesión';
+}
 
-socket.on('newPlayer', (playerInfo) => {
-  otherPlayers[playerInfo.id] = playerInfo;
-});
-
-socket.on('playerMoved', (playerInfo) => {
-  if (otherPlayers[playerInfo.id]) {
-    otherPlayers[playerInfo.id].x = playerInfo.x;
-    otherPlayers[playerInfo.id].z = playerInfo.z;
+function tryLogin() {
+  const u = document.getElementById('loginUser').value.trim();
+  const p = document.getElementById('loginPass').value.trim();
+  if(!u || !p) { document.getElementById('loginError').textContent = 'Rellena todos los campos'; return; }
+  
+  // Guardar temporalmente y verificar con localStorage del navegador por ahora (simulando cuenta guardada)
+  const savedAcc = localStorage.getItem('robaHuevo_acc_' + u);
+  if(!savedAcc) {
+    document.getElementById('loginError').textContent = 'La cuenta no existe';
+    return;
   }
-});
-
-socket.on('disconnectPlayer', (id) => {
-  delete otherPlayers[id];
-});
-
-const canvas=document.getElementById('game');
-const ctx=canvas.getContext('2d');
-const $=id=>document.getElementById(id);
-
-const SAFE=750, GARDEN_X=350, GARDEN_Y=700;
-const MAP_W=70000, MAP_H=1000;
-const DAY_MS=60000, NIGHT_MS=10000;
-
-const zones=[
- {name:'Bosque',need:10,color:'#438d40',boss:'🌳',open:8,reward:25,income:3,creatures:['Pollito del bosque','Zorro verde','Ciervo pequeño']},
- {name:'Lago',need:100,color:'#319bd4',boss:'🐊',open:12,reward:100,income:20,creatures:['Nutria mágica','Serpiente de agua','Tortuga azul']},
- {name:'Desierto',need:500,color:'#d9a441',boss:'🦂',open:18,reward:350,income:80,creatures:['Escorpión dorado','Zorro del desierto','Fénix de arena']},
- {name:'Selva',need:1000,color:'#16834a',boss:'🐅',open:22,reward:700,income:150,creatures:['Tigre selvático','Gólem de hojas','Serpiente gigante']},
- {name:'Nieve',need:2500,color:'#b9e4f6',boss:'❄️',open:28,reward:1500,income:350,creatures:['Lobo de hielo','Yeti pequeño','Zorro ártico']},
- {name:'Volcán',need:5000,color:'#ed572b',boss:'🌋',open:35,reward:3000,income:700,creatures:['Dragón de lava','Gólem volcánico','Fénix ardiente']},
- {name:'Océano del Abismo',need:10000,color:'#164e9b',boss:'🦑',open:45,reward:6000,income:1400,creatures:['Kraken bebé','Tiburón abisal','Medusa oscura']},
- {name:'Prehistórico',need:15000,color:'#8d6e63',boss:'🦖',open:55,reward:10000,income:2200,creatures:['Tiranosaurio bebé','Triceratops','Raptor antiguo']},
- {name:'Cósmico',need:25000,color:'#4527a0',boss:'🌌',open:65,reward:18000,income:3500,creatures:['Dragón estelar','Cometa viviente','Guardián galáctico']},
- {name:'Flor de Cerezo',need:50000,color:'#ed8ab4',boss:'🌸',open:75,reward:30000,income:6000,creatures:['Zorro sakura','Dragón de pétalos','Espíritu de cerezo']},
- {name:'Templo del Titán',need:100000,color:'#9e8876',boss:'🗿',open:85,reward:50000,income:7500,creatures:['Titán antiguo','Coloso de piedra','Guardián del templo']},
- {name:'Angels and Demons',need:250000,color:'#a28bff',boss:'😇',open:95,reward:100000,income:10000,creatures:['Ángel','Demonio','Ángeles y Demonios']},
- {name:'Bosque Encantado',need:500000,color:'#269b88',boss:'🧚',open:110,reward:200000,income:25000,creatures:['Hada antigua','Árbol consciente','Dragón encantado']},
- {name:'Zona Admin',need:2500000,color:'#e8d73d',boss:'👑',open:120,reward:1000000,income:60000,creatures:['Admin dorado','Dios del código','Entidad suprema']},
- {name:'Dimensión Cuántica',need:5000000,color:'#3b82f6',boss:'⚛️',open:130,reward:2500000,income:150000,creatures:['Átomo viviente','Quark veloz','Partícula alfa']},
- {name:'Núcleo de Plasma',need:10000000,color:'#ef4444',boss:'🔥',open:140,reward:5000000,income:350000,creatures:['Bestia de plasma','Fuego estelar','Supernova']},
- {name:'Reino Galáctico',need:50000000,color:'#8b5cf6',boss:'🪐',open:150,reward:25000000,income:1000000,creatures:['Señor de los anillos','Titán estelar','Cometa alfa']},
- {name:'Cúmulo de Estrellas',need:250000000,color:'#ec4899',boss:'🌟',open:160,reward:120000000,income:4000000,creatures:['Estrella fugaz','Nebulosa viva','Guardián de polvo']},
- {name:'Horizonte de Eventos',need:500000000,color:'#1e1b4b',boss:'🕳️',open:170,reward:250000000,income:10000000,creatures:['Monstruo de agujero','Sombra cósmica','Devorador de luz']},
- {name:'Multiverso Oscuro',need:1000000000,color:'#0f172a',boss:'🌌',open:180,reward:500000000,income:25000000,creatures:['Entidad oscura','Espejo dimensional','Dios caótico']},
- {name:'Dimensión Alfa',need:2500000000,color:'#14b8a6',boss:'⚡',open:190,reward:1200000000,income:60000000,creatures:['Titán alfa','Rayo perpetuo','Señor veloz']},
- {name:'Imperio Celestial',need:5000000000,color:'#facc15',boss:'☀️',open:200,reward:2500000000,income:150000000,creatures:['Arcángel solar','Dios del sol','Fénix celestial']},
- {name:'Torre de los Dioses',need:10000000000,color:'#fb923c',boss:'🏛️',open:210,reward:5000000000,income:350000000,creatures:['Sacerdote divino','Guardián supremo','Estatua sagrada']},
- {name:'Eternidad Pura',need:25000000000,color:'#a855f7',boss:'⏳',open:220,reward:12000000000,income:800000000,creatures:['Señor del tiempo','Espejismo eterno','Cronos']},
- {name:'Dimensión Omega',need:100000000000,color:'#dc2626',boss:'🛑',open:230,reward:50000000000,income:2000000000,creatures:['Devorador omega','Centinela final','Destructor']},
- {name:'Reino del Caos',need:250000000000,color:'#4338ca',boss:'🌀',open:240,reward:120000000000,income:5000000000,creatures:['Entidad caótica','Vórtice infinito','Señor del desorden']},
- {name:'Infinito Absoluto',need:500000000000,color:'#0284c7',boss:'♾️',open:250,reward:250000000000,income:12000000000,creatures:['Guardián infinito','Esencia pura','Avatar supremo']},
- {name:'El Trillón',need:1000000000000,color:'#ffffff',boss:'👑',open:260,reward:600000000000,income:30000000000,creatures:['Dios del Trillón','Entidad Primigenia','Creador del Todo']},
-
- // NUEVAS ZONAS SOLICITADAS (Trillones, Cuadrillones, Quintillón)
- {name:'Vórtice Cósmico',need:2500000000000,color:'#6366f1',boss:'🌀',open:270,reward:1200000000000,income:60000000000,creatures:['Espíritu del Vórtice','Onda Relámpago']},
- {name:'Furia Solar',need:5000000000000,color:'#f97316',boss:'☀️',open:280,reward:2500000000000,income:130000000000,creatures:['Llamarada Solar','Fénix de Fuego']},
- {name:'Abismo de Sombras',need:10000000000000,color:'#334155',boss:'🌑',open:290,reward:5000000000000,income:280000000000,creatures:['Sombra Ancestral','Devorador de Almas']},
- {name:'Reino Cristalino',need:25000000000000,color:'#38bdf8',boss:'💎',open:300,reward:12000000000000,income:650000000000,creatures:['Gólem de Diamante','Dragón de Cristal']},
- {name:'Constelación Suprema',need:50000000000000,color:'#e879f9',boss:'✨',open:310,reward:25000000000000,income:1400000000000,creatures:['Guardián Estelar','Cuerpo Celeste']},
- {name:'Núcleo Divino',need:100000000000000,color:'#facc15',boss:'⚡',open:320,reward:50000000000000,income:3000000000000,creatures:['Titán Divino','Rayo de Luz']},
- {name:'Dimensión Astral',need:250000000000000,color:'#a855f7',boss:'🔮',open:330,reward:120000000000000,income:7000000000000,creatures:['Viajero Astral','Espejismo Místico']},
- {name:'Luz Eterna',need:500000000000000,color:'#fef08a',boss:'🕯️',open:340,reward:250000000000000,income:15000000000000,creatures:['Ser de Luz','Ángel Luminoso']},
- {name:'El Cuadrillón',need:1000000000000000,color:'#22c55e',boss:'👑',open:350,reward:500000000000000,income:32000000000000,creatures:['Dios Cuadrillón','Señor Supremo']},
- {name:'Hiperespacio',need:2500000000000000,color:'#06b6d4',boss:'🚀',open:360,reward:1200000000000000,income:75000000000000,creatures:['Nave Estelar','Velocidad Luz']},
- {name:'Matriz Cuántica',need:5000000000000000,color:'#ec4899',boss:'💻',open:370,reward:2500000000000000,income:160000000000000,creatures:['Hacker del Espacio','Código Viviente']},
- {name:'Valle de Titanes',need:10000000000000000,color:'#78350f',boss:'🛡️',open:380,reward:5000000000000000,income:350000000000000,creatures:['Titán Legendario','Coloso de Hierro']},
- {name:'Energía Pura',need:25000000000000000,color:'#10b981',boss:'🔋',open:390,reward:12000000000000000,income:800000000000000,creatures:['Orbe de Poder','Chispa Infinita']},
- {name:'Horizonte Alfa',need:50000000000000000,color:'#f43f5e',boss:'🌅',open:400,reward:25000000000000000,income:1800000000000000,creatures:['Sol Naciente','Amanecer Estelar']},
- {name:'Templo Primigenio',need:100000000000000000,color:'#fbbf24',boss:'⛩️',open:410,reward:50000000000000000,income:4000000000000000,creatures:['Maestro Antiguo','Espíritu Sagrado']},
- {name:'Dimensión Secreta',need:250000000000000000,color:'#64748b',boss:'🗝️',open:420,reward:120000000000000000,income:9000000000000000,creatures:['Guardián de la Llave','Sombra Oculta']},
- {name:'Cima del Infinito',need:500000000000000000,color:'#c084fc',boss:'🏔️',open:430,reward:250000000000000000,income:20000000000000000,creatures:['Espíritu de las Alturas','Dios de la Cumbre']},
- {name:'El Quintillón Supreme',need:1000000000000000000,color:'#ffffff',boss:'💎',open:440,reward:500000000000000000,income:50000000000000000,creatures:['Dios Quintillón','Creador Absoluto','Entidad Omnipotente']}
-];
-
-const specialZones=[9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45];
-const angelCycle=['Ángel','Demonio','Ángeles y Demonios'];
-
-let player={x:250,y:700,speed:10,power:10,money:1000,capacity:5,inventory:[],carrying:null};
-let eggs=[],bosses=[],creatures=[],keys={};
-let cameraX=0,night=false,day=1,phaseStart=Date.now(),lastIncome=Date.now();
-let shopOpen=false,messageTimer=null;
-
-function loadGame(){
-  const saved=localStorage.getItem('robaHuevoSave_v3');
-  if(saved){
-    try{
-      const data=JSON.parse(saved);
-      player.money=data.money??1000;
-      player.power=data.power??10;
-      player.speed=data.speed??10;
-      player.capacity=data.capacity??5;
-      player.inventory=data.inventory??[];
-      creatures=data.creatures??[];
-      day=data.day??1;
-      
-      if(data.lastTime && creatures.length>0){
-        const secondsOffline=Math.floor((Date.now()-data.lastTime)/1000);
-        if(secondsOffline>5){
-          let offlineEarned=0;
-          for(const c of creatures) offlineEarned+=(c.money*secondsOffline);
-          player.money+=offlineEarned;
-          setTimeout(()=>say(`💰 ¡Bienvenido de nuevo! Ganaste ${fmt(offlineEarned)} monedas mientras estabas fuera.`), 1500);
-        }
-      }
-    }catch(e){console.error('Error al cargar partida', e);}
-  }
-}
-
-function saveGame(){
-  const data={
-    money:player.money,
-    power:player.power,
-    speed:player.speed,
-    capacity:player.capacity,
-    inventory:player.inventory,
-    creatures:creatures,
-    day:day,
-    lastTime:Date.now()
-  };
-  localStorage.setItem('robaHuevoSave_v3', JSON.stringify(data));
-}
-
-const rand=(a,b)=>a+Math.random()*(b-a);
-const fmt=n=>{
-  if(n>=1e18) return (n/1e18).toFixed(2)+' Qi';
-  if(n>=1e15) return (n/1e15).toFixed(2)+' Qa';
-  if(n>=1e12) return (n/1e12).toFixed(2)+' T';
-  if(n>=1e9) return (n/1e9).toFixed(2)+' B';
-  if(n>=1e6) return (n/1e6).toFixed(2)+' M';
-  return Math.floor(n).toLocaleString('es-EC');
-};
-const zoneX=i=>1000+i*1450;
-
-function amount(){
- if(player.power>=100000000000000000) return 100000000000000000; // 100 QA
- if(player.power>=10000000000000000) return 10000000000000000;   // 10 QA
- if(player.power>=1000000000000000) return 1000000000000000;     // 1 QA
- if(player.power>=100000000000000) return 100000000000000;       // 100 T
- if(player.power>=10000000000000) return 10000000000000;         // 10 T
- if(player.power>=1000000000000) return 1000000000000;           // 1 T
- if(player.power>=100000000000) return 100000000000;
- if(player.power>=10000000000) return 10000000000;
- if(player.power>=1000000000) return 1000000000;
- if(player.power>=100000000) return 100000000;
- if(player.power>=10000000) return 10000000;
- if(player.power>=3000000) return 1000000;
- if(player.power>=100000) return 100000;
- if(player.power>=25000) return 10000;
- if(player.power>=10000) return 1000;
- return 100;
-}
-function speedPrice(){
- return amount() * 50;
-}
-
-function say(text){
- $('message').textContent=text;
- $('message').style.display='block';
- clearTimeout(messageTimer);
- messageTimer=setTimeout(()=>$('message').style.display='none',2800);
-}
-
-function makeEgg(i,special=false){
- return {
-  id:Math.random().toString(36).slice(2),
-  zone:i,x:rand(zoneX(i)+100,zoneX(i)+1300),y:rand(250,850),
-  special,stolen:false,carried:false,timer:zones[i].open,opened:false
- };
-}
-function createWorld(){
- eggs=[];bosses=[];
- zones.forEach((z,i)=>{
-  for(let j=0;j<5;j++)eggs.push(makeEgg(i));
-  bosses.push({
-   zone:i,x:zoneX(i)+720,y:800,
-   homeX:zoneX(i)+720,homeY:800,
-   speed:Math.min(6, 2 + i * 0.15),chasing:null
-  });
- });
- spawnSpecialEggs();
-}
-function spawnSpecialEggs(){
- eggs=eggs.filter(e=>!e.special);
- for(const i of specialZones)eggs.push(makeEgg(i,true));
-}
-function resetBoss(e){
- const b=bosses[e.zone];
- if(b){b.chasing=null;b.x=b.homeX;b.y=b.homeY}
-}
-function nearBase(){
- return Math.hypot(player.x-250,player.y-GARDEN_Y)<260;
-}
-function nearTreadmill(){
- return Math.hypot(player.x-(GARDEN_X+420),player.y-GARDEN_Y)<170;
-}
-function openShop(){
- if(!nearBase()&&!nearTreadmill()){
-  say('Acércate a la base o a la caminadora para comprar mejoras.');
-  return;
- }
- shopOpen=true;$('shop').style.display='block';updateShop();
-}
-function closeShop(){shopOpen=false;$('shop').style.display='none'}
-
-function updateShop() {
-  document.getElementById('shopMoney').textContent = fmt(player.money);
-  document.getElementById('shopSpeed').textContent = fmt(player.power);
-  document.getElementById('shopAmount').textContent = fmt(amount());
-  document.getElementById('shopPrice').textContent = fmt(speedPrice());
-
-  const buyButton = document.getElementById('buySpeed');
-  buyButton.textContent = `⚡ Comprar +${fmt(amount())} de Poder (${fmt(speedPrice())} monedas)`;
-
-  document.getElementById('buyCapacity').textContent =
-    `🎒 Ampliar capacidad (${fmt(250 + (player.capacity - 5) * 250)} monedas)`;
-}
-
-document.getElementById('buySpeed').onclick = function () {
-  const cost = speedPrice();
-  const increase = amount();
-
-  if (player.money < cost) {
-    say('No tienes suficientes monedas. Necesitas ' + fmt(cost) + ' monedas.');
+  const accData = JSON.parse(savedAcc);
+  if(accData.pass !== p) {
+    document.getElementById('loginError').textContent = 'Contraseña incorrecta';
     return;
   }
 
-  player.money -= cost;
-  player.power += increase;
-  
-  player.speed = Math.min(22, 10 + Math.floor(Math.log10(player.power + 1) * 1.2));
+  currentUser = u;
+  startGameWithData(accData);
+}
 
-  if(player.power >= 100000000000000000 && player.power - increase < 100000000000000000){
-    say('👑 ¡Poder de 100QA alcanzado! Ahora compras de 100QA en 100QA.');
-  } else if(player.power >= 10000000000000000 && player.power - increase < 10000000000000000){
-    say('⭐ ¡Poder de 10QA alcanzado! Ahora compras de 10QA en 10QA.');
-  } else if(player.power >= 1000000000000000 && player.power - increase < 1000000000000000){
-    say('🚀 ¡Poder de 1QA alcanzado! Ahora compras de 1QA en 1QA.');
-  } else if(player.power >= 100000000000000 && player.power - increase < 100000000000000){
-    say('🔥 ¡Poder de 100T alcanzado! Ahora compras de 100T en 100T.');
-  } else if(player.power >= 10000000000000 && player.power - increase < 10000000000000){
-    say('⚡ ¡Poder de 10T alcanzado! Ahora compras de 10T en 10T.');
-  } else if(player.power >= 1000000000000 && player.power - increase < 1000000000000){
-    say('🌟 ¡Poder de 1T alcanzado! Ahora compras de 1T en 1T.');
-  } else {
-    say('¡Compraste +' + fmt(increase) + ' de poder de robo!');
+function tryRegister() {
+  const u = document.getElementById('regUser').value.trim();
+  const p = document.getElementById('regPass').value.trim();
+  if(!u || !p) { document.getElementById('regError').textContent = 'Rellena todos los campos'; return; }
+  
+  if(localStorage.getItem('robaHuevo_acc_' + u)) {
+    document.getElementById('regError').textContent = 'El usuario ya existe';
+    return;
   }
 
-  updateHud();
-  updateShop();
-  saveGame();
-};
+  const newAcc = {
+    user: u,
+    pass: p,
+    money: 1000,
+    power: 10,
+    speed: 10,
+    capacity: 5,
+    inventory: [],
+    creatures: [],
+    day: 1
+  };
+  localStorage.setItem('robaHuevo_acc_' + u, JSON.stringify(newAcc));
+  currentUser = u;
+  startGameWithData(newAcc);
+}
 
-$('buyCapacity').onclick=()=>{
- const cost=250+(player.capacity-5)*250;
- if(player.money<cost){say('No tienes suficientes monedas.');return}
- player.money-=cost;player.capacity++;
- say('¡Capacidad aumentada!');updateHud();updateShop();saveGame();
-};
-$('closeShop').onclick=closeShop;
+function startGameWithData(data) {
+  document.getElementById('authScreen').style.display = 'none';
+  initGame(data);
+}
 
-function reiniciarHuevosDeNoche() {
-  eggs.length = 0;
-  zones.forEach((zone, index) => {
-    for (let i = 0; i < 5; i++) {
-      eggs.push({
-        id: Math.random().toString(36).slice(2),
-        zone: index,
-        x: rand(zoneX(index) + 100, zoneX(index) + 1300),
-        y: rand(250, 850),
-        special: false,
-        stolen: false,
-        carried: false,
-        timer: zone.open,
-        opened: false
-      });
+function initGame(savedData) {
+  socket = io();
+  let otherPlayers = {};
+
+  socket.on('currentPlayers', (players) => {
+    otherPlayers = players;
+    delete otherPlayers[socket.id];
+  });
+
+  socket.on('newPlayer', (playerInfo) => {
+    otherPlayers[playerInfo.id] = playerInfo;
+  });
+
+  socket.on('playerMoved', (playerInfo) => {
+    if (otherPlayers[playerInfo.id]) {
+      otherPlayers[playerInfo.id].x = playerInfo.x;
+      otherPlayers[playerInfo.id].z = playerInfo.z;
     }
   });
-  spawnSpecialEggs();
-  bosses.forEach((boss, index) => {
-    boss.x = boss.homeX;
-    boss.y = boss.homeY;
-    boss.chasing = null;
+
+  socket.on('disconnectPlayer', (id) => {
+    delete otherPlayers[id];
   });
-  player.carrying = null;
-  say("🌙 ¡Noche! Todos los huevos se reiniciaron.");
-}
 
-function nearestEgg(){
- let result=null,best=125;
- for(const e of eggs){
-  if(e.stolen||e.carried)continue;
-  const d=Math.hypot(player.x-e.x,player.y-e.y);
-  if(d<best){best=d;result=e}
- }
- return result;
-}
-function interact(){
- if(shopOpen){closeShop();return}
- if(night){say('🌙 Es de noche. Espera a que amanezca para robar huevos.');return}
+  const canvas=document.getElementById('game');
+  const ctx=canvas.getContext('2d');
+  const $=id=>document.getElementById(id);
 
- if(player.carrying){
-  if(player.x<=SAFE){deliverEgg();return}
-  if(player.x<GARDEN_X+210&&player.y>GARDEN_Y-160){plantEgg();return}
-  say('Lleva el huevo a la línea segura o al jardín.');return;
- }
+  const SAFE=750, GARDEN_X=350, GARDEN_Y=700;
+  const MAP_W=70000, MAP_H=1000;
+  const DAY_MS=60000, NIGHT_MS=10000;
 
- const e=nearestEgg();
- if(!e){say('Acércate a un huevo y presiona E.');return}
- const z=zones[e.zone];
+  const zones=[
+   {name:'Bosque',need:10,color:'#438d40',boss:'🌳',open:8,reward:25,income:3,creatures:['Pollito del bosque','Zorro verde','Ciervo pequeño']},
+   {name:'Lago',need:100,color:'#319bd4',boss:'🐊',open:12,reward:100,income:20,creatures:['Nutria mágica','Serpiente de agua','Tortuga azul']},
+   {name:'Desierto',need:500,color:'#d9a441',boss:'🦂',open:18,reward:350,income:80,creatures:['Escorpión dorado','Zorro del desierto','Fénix de arena']},
+   {name:'Selva',need:1000,color:'#16834a',boss:'🐅',open:22,reward:700,income:150,creatures:['Tigre selvático','Gólem de hojas','Serpiente gigante']},
+   {name:'Nieve',need:2500,color:'#b9e4f6',boss:'❄️',open:28,reward:1500,income:350,creatures:['Lobo de hielo','Yeti pequeño','Zorro ártico']},
+   {name:'Volcán',need:5000,color:'#ed572b',boss:'🌋',open:35,reward:3000,income:700,creatures:['Dragón de lava','Gólem volcánico','Fénix ardiente']},
+   {name:'Océano del Abismo',need:10000,color:'#164e9b',boss:'🦑',open:45,reward:6000,income:1400,creatures:['Kraken bebé','Tiburón abisal','Medusa oscura']},
+   {name:'Prehistórico',need:15000,color:'#8d6e63',boss:'🦖',open:55,reward:10000,income:2200,creatures:['Tiranosaurio bebé','Triceratops','Raptor antiguo']},
+   {name:'Cósmico',need:25000,color:'#4527a0',boss:'🌌',open:65,reward:18000,income:3500,creatures:['Dragón estelar','Cometa viviente','Guardián galáctico']},
+   {name:'Flor de Cerezo',need:50000,color:'#ed8ab4',boss:'🌸',open:75,reward:30000,income:6000,creatures:['Zorro sakura','Dragón de pétalos','Espíritu de cerezo']},
+   {name:'Templo del Titán',need:100000,color:'#9e8876',boss:'🗿',open:85,reward:50000,income:7500,creatures:['Titán antiguo','Coloso de piedra','Guardián del templo']},
+   {name:'Angels and Demons',need:250000,color:'#a28bff',boss:'😇',open:95,reward:100000,income:10000,creatures:['Ángel','Demonio','Ángeles y Demonios']},
+   {name:'Bosque Encantado',need:500000,color:'#269b88',boss:'🧚',open:110,reward:200000,income:25000,creatures:['Hada antigua','Árbol consciente','Dragón encantado']},
+   {name:'Zona Admin',need:2500000,color:'#e8d73d',boss:'👑',open:120,reward:1000000,income:60000,creatures:['Admin dorado','Dios del código','Entidad suprema']},
+   {name:'Dimensión Cuántica',need:5000000,color:'#3b82f6',boss:'⚛️',open:130,reward:2500000,income:150000,creatures:['Átomo viviente','Quark veloz','Partícula alfa']},
+   {name:'Núcleo de Plasma',need:10000000,color:'#ef4444',boss:'🔥',open:140,reward:5000000,income:350000,creatures:['Bestia de plasma','Fuego estelar','Supernova']},
+   {name:'Reino Galáctico',need:50000000,color:'#8b5cf6',boss:'🪐',open:150,reward:25000000,income:1000000,creatures:['Señor de los anillos','Titán estelar','Cometa alfa']},
+   {name:'Cúmulo de Estrellas',need:250000000,color:'#ec4899',boss:'🌟',open:160,reward:120000000,income:4000000,creatures:['Estrella fugaz','Nebulosa viva','Guardián de polvo']},
+   {name:'Horizonte de Eventos',need:500000000,color:'#1e1b4b',boss:'🕳️',open:170,reward:250000000,income:10000000,creatures:['Monstruo de agujero','Sombra cósmica','Devorador de luz']},
+   {name:'Multiverso Oscuro',need:1000000000,color:'#0f172a',boss:'🌌',open:180,reward:500000000,income:25000000,creatures:['Entidad oscura','Espejo dimensional','Dios caótico']},
+   {name:'Dimensión Alfa',need:2500000000,color:'#14b8a6',boss:'⚡',open:190,reward:1200000000,income:60000000,creatures:['Titán alfa','Rayo perpetuo','Señor veloz']},
+   {name:'Imperio Celestial',need:5000000000,color:'#facc15',boss:'☀️',open:200,reward:2500000000,income:150000000,creatures:['Arcángel solar','Dios del sol','Fénix celestial']},
+   {name:'Torre de los Dioses',need:10000000000,color:'#fb923c',boss:'🏛️',open:210,reward:5000000000,income:350000000,creatures:['Sacerdote divino','Guardián supremo','Estatua sagrada']},
+   {name:'Eternidad Pura',need:25000000000,color:'#a855f7',boss:'⏳',open:220,reward:12000000000,income:800000000,creatures:['Señor del tiempo','Espejismo eterno','Cronos']},
+   {name:'Dimensión Omega',need:100000000000,color:'#dc2626',boss:'🛑',open:230,reward:50000000000,income:2000000000,creatures:['Devorador omega','Centinela final','Destructor']},
+   {name:'Reino del Caos',need:250000000000,color:'#4338ca',boss:'🌀',open:240,reward:120000000000,income:5000000000,creatures:['Entidad caótica','Vórtice infinito','Señor del desorden']},
+   {name:'Infinito Absoluto',need:500000000000,color:'#0284c7',boss:'♾️',open:250,reward:250000000000,income:12000000000,creatures:['Guardián infinito','Esencia pura','Avatar supremo']},
+   {name:'El Trillón',need:1000000000000,color:'#ffffff',boss:'👑',open:260,reward:600000000000,income:30000000000,creatures:['Dios del Trillón','Entidad Primigenia','Creador del Todo']},
+   {name:'Vórtice Cósmico',need:2500000000000,color:'#6366f1',boss:'🌀',open:270,reward:1200000000000,income:60000000000,creatures:['Espíritu del Vórtice','Onda Relámpago']},
+   {name:'Furia Solar',need:5000000000000,color:'#f97316',boss:'☀️',open:280,reward:2500000000000,income:130000000000,creatures:['Llamarada Solar','Fénix de Fuego']},
+   {name:'Abismo de Sombras',need:10000000000000,color:'#334155',boss:'🌑',open:290,reward:5000000000000,income:280000000000,creatures:['Sombra Ancestral','Devorador de Almas']},
+   {name:'Reino Cristalino',need:25000000000000,color:'#38bdf8',boss:'💎',open:300,reward:12000000000000,income:650000000000,creatures:['Gólem de Diamante','Dragón de Cristal']},
+   {name:'Constelación Suprema',need:50000000000000,color:'#e879f9',boss:'✨',open:310,reward:25000000000000,income:1400000000000,creatures:['Guardián Estelar','Cuerpo Celeste']},
+   {name:'Núcleo Divino',need:100000000000000,color:'#facc15',boss:'⚡',open:320,reward:50000000000000,income:3000000000000,creatures:['Titán Divino','Rayo de Luz']},
+   {name:'Dimensión Astral',need:250000000000000,color:'#a855f7',boss:'🔮',open:330,reward:120000000000000,income:7000000000000,creatures:['Viajero Astral','Espejismo Místico']},
+   {name:'Luz Eterna',need:500000000000000,color:'#fef08a',boss:'🕯️',open:340,reward:250000000000000,income:15000000000000,creatures:['Ser de Luz','Ángel Luminoso']},
+   {name:'El Cuadrillón',need:1000000000000000,color:'#22c55e',boss:'👑',open:350,reward:500000000000000,income:32000000000000,creatures:['Dios Cuadrillón','Señor Supremo']},
+   {name:'Hiperespacio',need:2500000000000000,color:'#06b6d4',boss:'🚀',open:360,reward:1200000000000000,income:75000000000000,creatures:['Nave Estelar','Velocidad Luz']},
+   {name:'Matriz Cuántica',need:5000000000000000,color:'#ec4899',boss:'💻',open:370,reward:2500000000000000,income:160000000000000,creatures:['Hacker del Espacio','Código Viviente']},
+   {name:'Valle de Titanes',need:10000000000000000,color:'#78350f',boss:'🛡️',open:380,reward:5000000000000000,income:350000000000000,creatures:['Titán Legendario','Coloso de Hierro']},
+   {name:'Energía Pura',need:25000000000000000,color:'#10b981',boss:'🔋',open:390,reward:12000000000000000,income:800000000000000,creatures:['Orbe de Poder','Chispa Infinita']},
+   {name:'Horizonte Alfa',need:50000000000000000,color:'#f43f5e',boss:'🌅',open:400,reward:25000000000000000,income:1800000000000000,creatures:['Sol Naciente','Amanecer Estelar']},
+   {name:'Templo Primigenio',need:100000000000000000,color:'#fbbf24',boss:'⛩️',open:410,reward:50000000000000000,income:4000000000000000,creatures:['Maestro Antiguo','Espíritu Sagrado']},
+   {name:'Dimensión Secreta',need:250000000000000000,color:'#64748b',boss:'🗝️',open:420,reward:120000000000000000,income:9000000000000000,creatures:['Guardián de la Llave','Sombra Oculta']},
+   {name:'Cima del Infinito',need:500000000000000000,color:'#c084fc',boss:'🏔️',open:430,reward:250000000000000000,income:20000000000000000,creatures:['Espíritu de las Alturas','Dios de la Cumbre']},
+   {name:'El Quintillón Supreme',need:1000000000000000000,color:'#ffffff',boss:'💎',open:440,reward:500000000000000000,income:50000000000000000,creatures:['Dios Quintillón','Creador Absoluto','Entidad Omnipotente']}
+  ];
 
- if(player.power<z.need){
-  say(`Necesitas ${fmt(z.need)} de poder para robar en ${z.name}. Tienes ${fmt(player.power)}.`);
-  return;
- }
- if(player.inventory.length>=player.capacity){
-  say('Inventario lleno. Espera a que eclosionen huevos o mejora la capacidad.');return;
- }
- e.stolen=true;e.carried=true;player.carrying=e;
- bosses[e.zone].chasing=e.id;
- say((e.special?'✨ ¡HUEVO ESPECIAL CON AURA! ':'')+'¡Robaste un huevo de '+z.name+'! Corre a la zona segura.');
-}
-function deliverEgg(){
- const e=player.carrying;if(!e)return;
- if(player.inventory.length>=player.capacity){
-  say('Inventario lleno. No puedes guardar este huevo.');return;
- }
- e.carried=false;e.timer=zones[e.zone].open;
- player.inventory.push(e);player.money+=zones[e.zone].reward;
- eggs=eggs.filter(x=>x.id!==e.id);resetBoss(e);player.carrying=null;
- say(`¡Huevo entregado! +${fmt(zones[e.zone].reward)} monedas.`);
- updateHud();saveGame();
-}
-function plantEgg(){
- const e=player.carrying;if(!e)return;
- if(player.inventory.length>=player.capacity){say('Inventario lleno.');return}
- e.carried=false;e.timer=zones[e.zone].open;
- player.inventory.push(e);eggs=eggs.filter(x=>x.id!==e.id);
- resetBoss(e);player.carrying=null;
- say('🌱 ¡Huevo plantado! Espera a que eclosione.');updateHud();saveGame();
-}
-function updateBosses(dt){
- for(const b of bosses){
-  if(!b.chasing)continue;
-  const e=player.carrying;
-  if(!e||e.id!==b.chasing){b.chasing=null;b.x=b.homeX;b.y=b.homeY;continue}
-  const dx=player.x-b.x,dy=player.y-b.y,d=Math.hypot(dx,dy)||1;
-  b.x+=dx/d*b.speed*dt*60;b.y+=dy/d*b.speed*dt*60;
-  if(player.x<=SAFE){deliverEgg();resetBoss(e);continue}
-  if(d<42){
-   player.x=SAFE-70;player.y=700;
-   player.carrying=null;e.carried=false;e.stolen=false;
-   e.x=zoneX(e.zone)+rand(100,1200);e.y=rand(250,850);
-   resetBoss(e);say('¡El jefe te alcanzó! El huevo volvió a su zona.');
+  const specialZones=[9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45];
+  const angelCycle=['Ángel','Demonio','Ángeles y Demonios'];
+
+  let player={
+    x:250, y:700,
+    speed: savedData.speed,
+    power: savedData.power,
+    money: savedData.money,
+    capacity: savedData.capacity,
+    inventory: savedData.inventory,
+    carrying: null
+  };
+
+  let eggs=[], bosses=[], creatures=[], keys={};
+  let cameraX=0, night=false, day=savedData.day, phaseStart=Date.now(), lastIncome=Date.now();
+  creatures = savedData.creatures || [];
+  let shopOpen=false, messageTimer=null;
+
+  function saveGame(){
+    const currentAcc = JSON.parse(localStorage.getItem('robaHuevo_acc_' + currentUser));
+    if(currentAcc) {
+      currentAcc.money = player.money;
+      currentAcc.power = player.power;
+      currentAcc.speed = player.speed;
+      currentAcc.capacity = player.capacity;
+      currentAcc.inventory = player.inventory;
+      currentAcc.creatures = creatures;
+      currentAcc.day = day;
+      localStorage.setItem('robaHuevo_acc_' + currentUser, JSON.stringify(currentAcc));
+    }
   }
- }
-}
-function movePlayer(dt){
- let dx=0,dy=0;
- if(keys.KeyW||keys.ArrowUp)dy--;
- if(keys.KeyS||keys.ArrowDown)dy++;
- if(keys.KeyA||keys.ArrowLeft)dx--;
- if(keys.KeyD||keys.ArrowRight)dx++;
- if(dx&&dy){dx*=Math.SQRT1_2;dy*=Math.SQRT1_2}
- const sprint=(keys.ShiftLeft||keys.ShiftRight)?1.5:1;
- let nx=player.x+dx*player.speed*sprint*dt*60;
- let ny=player.y+dy*player.speed*sprint*dt*60;
- if(night&&nx>SAFE)nx=SAFE;
- player.x=Math.max(45,Math.min(MAP_W-50,nx));
- player.y=Math.max(150,Math.min(MAP_H-90,ny));
 
- socket.emit('playerMovement', { x: player.x, z: player.y });
-}
-function updateInventory(dt){
- for(const e of player.inventory){
-  if(e.timer>0){
-   e.timer-=dt;
-   if(e.timer<=0){
-    const z=zones[e.zone];
-    let name=z.creatures[Math.floor(Math.random()*z.creatures.length)];
-    if(e.zone===11)name=angelCycle[(day-1)%3];
-    creatures.push({
-     name,zone:e.zone,money:z.income,
-     x:GARDEN_X+rand(25,260),y:GARDEN_Y+rand(-45,55)
+  const rand=(a,b)=>a+Math.random()*(b-a);
+  const fmt=n=>{
+    if(n>=1e18) return (n/1e18).toFixed(2)+' Qi';
+    if(n>=1e15) return (n/1e15).toFixed(2)+' Qa';
+    if(n>=1e12) return (n/1e12).toFixed(2)+' T';
+    if(n>=1e9) return (n/1e9).toFixed(2)+' B';
+    if(n>=1e6) return (n/1e6).toFixed(2)+' M';
+    return Math.floor(n).toLocaleString('es-EC');
+  };
+  const zoneX=i=>1000+i*1450;
+
+  function amount(){
+   if(player.power>=100000000000000000) return 100000000000000000;
+   if(player.power>=10000000000000000) return 10000000000000000;
+   if(player.power>=1000000000000000) return 1000000000000000;
+   if(player.power>=100000000000000) return 100000000000000;
+   if(player.power>=10000000000000) return 10000000000000;
+   if(player.power>=1000000000000) return 1000000000000;
+   if(player.power>=100000000000) return 100000000000;
+   if(player.power>=10000000000) return 10000000000;
+   if(player.power>=1000000000) return 1000000000;
+   if(player.power>=100000000) return 100000000;
+   if(player.power>=10000000) return 10000000;
+   if(player.power>=3000000) return 1000000;
+   if(player.power>=100000) return 100000;
+   if(player.power>=25000) return 10000;
+   if(player.power>=10000) return 1000;
+   return 100;
+  }
+  function speedPrice(){ return amount() * 50; }
+
+  function say(text){
+   $('message').textContent=text;
+   $('message').style.display='block';
+   clearTimeout(messageTimer);
+   messageTimer=setTimeout(()=>$('message').style.display='none',2800);
+  }
+
+  function makeEgg(i,special=false){
+   return {
+    id:Math.random().toString(36).slice(2),
+    zone:i,x:rand(zoneX(i)+100,zoneX(i)+1300),y:rand(250,850),
+    special,stolen:false,carried:false,timer:zones[i].open,opened:false
+   };
+  }
+  function createWorld(){
+   eggs=[];bosses=[];
+   zones.forEach((z,i)=>{
+    for(let j=0;j<5;j++)eggs.push(makeEgg(i));
+    bosses.push({
+     zone:i,x:zoneX(i)+720,y:800,
+     homeX:zoneX(i)+720,homeY:800,
+     speed:Math.min(6, 2 + i * 0.15),chasing:null
     });
-    e.opened=true;
-    say(`¡Eclosionó ${name}! Produce ${fmt(z.income)} monedas por segundo.`);
+   });
+   spawnSpecialEggs();
+  }
+  function spawnSpecialEggs(){
+   eggs=eggs.filter(e=>!e.special);
+   for(const i of specialZones)eggs.push(makeEgg(i,true));
+  }
+  function resetBoss(e){
+   const b=bosses[e.zone];
+   if(b){b.chasing=null;b.x=b.homeX;b.y=b.homeY}
+  }
+  function nearBase(){ return Math.hypot(player.x-250,player.y-GARDEN_Y)<260; }
+  function nearTreadmill(){ return Math.hypot(player.x-(GARDEN_X+420),player.y-GARDEN_Y)<170; }
+  function openShop(){
+   if(!nearBase()&&!nearTreadmill()){ say('Acércate a la base o a la caminadora para comprar mejoras.'); return; }
+   shopOpen=true;$('shop').style.display='block';updateShop();
+  }
+  function closeShop(){shopOpen=false;$('shop').style.display='none'}
+
+  function updateShop() {
+    document.getElementById('shopMoney').textContent = fmt(player.money);
+    document.getElementById('shopSpeed').textContent = fmt(player.power);
+    document.getElementById('shopAmount').textContent = fmt(amount());
+    document.getElementById('shopPrice').textContent = fmt(speedPrice());
+    const buyButton = document.getElementById('buySpeed');
+    buyButton.textContent = `⚡ Comprar +${fmt(amount())} de Poder (${fmt(speedPrice())} monedas)`;
+    document.getElementById('buyCapacity').textContent = `🎒 Ampliar capacidad (${fmt(250 + (player.capacity - 5) * 250)} monedas)`;
+  }
+
+  document.getElementById('buySpeed').onclick = function () {
+    const cost = speedPrice();
+    const increase = amount();
+    if (player.money < cost) { say('No tienes suficientes monedas. Necesitas ' + fmt(cost) + ' monedas.'); return; }
+    player.money -= cost;
+    player.power += increase;
+    player.speed = Math.min(22, 10 + Math.floor(Math.log10(player.power + 1) * 1.2));
+    say('¡Compraste +' + fmt(increase) + ' de poder de robo!');
+    updateHud(); updateShop(); saveGame();
+  };
+
+  $('buyCapacity').onclick=()=>{
+   const cost=250+(player.capacity-5)*250;
+   if(player.money<cost){say('No tienes suficientes monedas.');return}
+   player.money-=cost;player.capacity++;
+   say('¡Capacidad aumentada!');updateHud();updateShop();saveGame();
+  };
+  $('closeShop').onclick=closeShop;
+
+  function reiniciarHuevosDeNoche() {
+    eggs.length = 0;
+    zones.forEach((zone, index) => {
+      for (let i = 0; i < 5; i++) {
+        eggs.push({
+          id: Math.random().toString(36).slice(2),
+          zone: index,
+          x: rand(zoneX(index) + 100, zoneX(index) + 1300),
+          y: rand(250, 850),
+          special: false, stolen: false, carried: false,
+          timer: zone.open, opened: false
+        });
+      }
+    });
+    spawnSpecialEggs();
+    bosses.forEach((boss, index) => { boss.x = boss.homeX; boss.y = boss.homeY; boss.chasing = null; });
+    player.carrying = null;
+    say("🌙 ¡Noche! Todos los huevos se reiniciaron.");
+  }
+
+  function nearestEgg(){
+   let result=null,best=125;
+   for(const e of eggs){
+    if(e.stolen||e.carried)continue;
+    const d=Math.hypot(player.x-e.x,player.y-e.y);
+    if(d<best){best=d;result=e}
+   }
+   return result;
+  }
+  function interact(){
+   if(shopOpen){closeShop();return}
+   if(night){say('🌙 Es de noche. Espera a que amanezca para robar huevos.');return}
+   if(player.carrying){
+    if(player.x<=SAFE){deliverEgg();return}
+    if(player.x<GARDEN_X+210&&player.y>GARDEN_Y-160){plantEgg();return}
+    say('Lleva el huevo a la línea segura o al jardín.');return;
+   }
+   const e=nearestEgg();
+   if(!e){say('Acércate a un huevo y presiona E.');return}
+   const z=zones[e.zone];
+   if(player.power<z.need){ say(`Necesitas ${fmt(z.need)} de poder para robar en ${z.name}.`); return; }
+   if(player.inventory.length>=player.capacity){ say('Inventario lleno.'); return; }
+   e.stolen=true;e.carried=true;player.carrying=e;
+   bosses[e.zone].chasing=e.id;
+   say((e.special?'✨ ¡HUEVO ESPECIAL! ':'')+'¡Robaste un huevo de '+z.name+'! Corre a la zona segura.');
+  }
+  function deliverEgg(){
+   const e=player.carrying;if(!e)return;
+   if(player.inventory.length>=player.capacity){say('Inventario lleno.');return;}
+   e.carried=false;e.timer=zones[e.zone].open;
+   player.inventory.push(e);player.money+=zones[e.zone].reward;
+   eggs=eggs.filter(x=>x.id!==e.id);resetBoss(e);player.carrying=null;
+   say(`¡Huevo entregado! +${fmt(zones[e.zone].reward)} monedas.`);
+   updateHud();saveGame();
+  }
+  function plantEgg(){
+   const e=player.carrying;if(!e)return;
+   if(player.inventory.length>=player.capacity){say('Inventario lleno.');return}
+   e.carried=false;e.timer=zones[e.zone].open;
+   player.inventory.push(e);eggs=eggs.filter(x=>x.id!==e.id);
+   resetBoss(e);player.carrying=null;
+   say('🌱 ¡Huevo plantado!');updateHud();saveGame();
+  }
+  function updateBosses(dt){
+   for(const b of bosses){
+    if(!b.chasing)continue;
+    const e=player.carrying;
+    if(!e||e.id!==b.chasing){b.chasing=null;b.x=b.homeX;b.y=b.homeY;continue}
+    const dx=player.x-b.x,dy=player.y-b.y,d=Math.hypot(dx,dy)||1;
+    b.x+=dx/d*b.speed*dt*60;b.y+=dy/d*b.speed*dt*60;
+    if(player.x<=SAFE){deliverEgg();resetBoss(e);continue}
+    if(d<42){
+     player.x=SAFE-70;player.y=700;
+     player.carrying=null;e.carried=false;e.stolen=false;
+     e.x=zoneX(e.zone)+rand(100,1200);e.y=rand(250,850);
+     resetBoss(e);say('¡El jefe te alcanzó!');
+    }
+   }
+  }
+  function movePlayer(dt){
+   let dx=0,dy=0;
+   if(keys.KeyW||keys.ArrowUp)dy--;
+   if(keys.KeyS||keys.ArrowDown)dy++;
+   if(keys.KeyA||keys.ArrowLeft)dx--;
+   if(keys.KeyD||keys.ArrowRight)dx++;
+   if(dx&&dy){dx*=Math.SQRT1_2;dy*=Math.SQRT1_2}
+   const sprint=(keys.ShiftLeft||keys.ShiftRight)?1.5:1;
+   let nx=player.x+dx*player.speed*sprint*dt*60;
+   let ny=player.y+dy*player.speed*sprint*dt*60;
+   if(night&&nx>SAFE)nx=SAFE;
+   player.x=Math.max(45,Math.min(MAP_W-50,nx));
+   player.y=Math.max(150,Math.min(MAP_H-90,ny));
+   socket.emit('playerMovement', { x: player.x, z: player.y });
+  }
+  function updateInventory(dt){
+   for(const e of player.inventory){
+    if(e.timer>0){
+     e.timer-=dt;
+     if(e.timer<=0){
+      const z=zones[e.zone];
+      let name=z.creatures[Math.floor(Math.random()*z.creatures.length)];
+      if(e.zone===11)name=angelCycle[(day-1)%3];
+      creatures.push({name,zone:e.zone,money:z.income,x:GARDEN_X+rand(25,260),y:GARDEN_Y+rand(-45,55)});
+      e.opened=true;
+      say(`¡Eclosionó ${name}! Produce ${fmt(z.income)}/s.`);
+      saveGame();
+     }
+    }
+   }
+   player.inventory=player.inventory.filter(e=>!e.opened);
+  }
+  function updateEvents(now){
+   if(!night&&now-phaseStart>=DAY_MS){
+    night=true;phaseStart=now;reiniciarHuevosDeNoche();
+   }else if(night&&now-phaseStart>=NIGHT_MS){
+    night=false;phaseStart=now;day++;
+    spawnSpecialEggs();
+    say('☀️ ¡Día '+day+'! Huevos especiales con aura.');
     saveGame();
    }
   }
- }
- player.inventory=player.inventory.filter(e=>!e.opened);
-}
-function updateEvents(now){
- if(!night&&now-phaseStart>=DAY_MS){
-  night=true;phaseStart=now;
-  reiniciarHuevosDeNoche();
- }else if(night&&now-phaseStart>=NIGHT_MS){
-  night=false;phaseStart=now;day++;
-  spawnSpecialEggs();
-  say('☀️ ¡Día '+day+'! Aparecieron los huevos especiales con aura.');
-  saveGame();
- }
-}
-function updateIncome(now){
- const seconds=Math.floor((now-lastIncome)/1000);
- if(seconds<=0)return;
- lastIncome+=seconds*1000;
- let total=0;
- for(const c of creatures)total+=c.money*seconds;
- if(total)player.money+=total;
-}
-function updateHud(){
- $('money').textContent=fmt(player.money);$('speed').textContent=fmt(player.power);
- $('amount').textContent=fmt(amount());$('capacity').textContent=`${player.inventory.length+(player.carrying?1:0)}/${player.capacity}`;
- $('day').textContent=day;
- $('egginv').textContent=player.inventory.length?
-  player.inventory.map(e=>zones[e.zone].name+(e.special?' ✨':'')+' ('+Math.max(0,Math.ceil(e.timer))+'s)').join(' · '):'Vacío';
- 
- $('gardeninv').textContent=creatures.length?
-  creatures.map(c=>c.name+' ('+fmt(c.money)+'/s)').join(' · '):'Todavía no tienes criaturas.';
- if(shopOpen)updateShop();
-}
-function drawText(t,x,y,size=16,color='#fff'){
- ctx.font=`bold ${size}px Arial`;ctx.textAlign='center';ctx.fillStyle=color;ctx.fillText(t,x,y);
-}
-function drawEgg(e){
- const x=e.x-cameraX;
- if(x<-60||x>canvas.width+60)return;
- const z=zones[e.zone];
- if(e.special){
-  const g=ctx.createRadialGradient(x,e.y,2,x,e.y,55);
-  g.addColorStop(0,'#fffbd9');g.addColorStop(.3,'#ffe86bbb');g.addColorStop(1,'#ffe86b00');
-  ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,e.y,55,0,Math.PI*2);ctx.fill();
- }
- ctx.fillStyle=e.special?'#fff6a8':z.color;
- ctx.beginPath();ctx.ellipse(x,e.y,17,23,0,0,Math.PI*2);ctx.fill();
- ctx.strokeStyle=e.special?'#fff':'#ffffffaa';ctx.lineWidth=e.special?4:2;ctx.stroke();
- drawText(e.special?'✨':'🥚',x,e.y+7,17);
- drawText(e.special?'HUEVO ESPECIAL':z.name,x,e.y-31,11,e.special?'#fff4a0':'#fff');
-}
-function draw(){
- const W=canvas.width,H=canvas.height;
- ctx.clearRect(0,0,W,H);
- const sky=ctx.createLinearGradient(0,0,0,H);
- sky.addColorStop(0,night?'#07122b':'#65caff');
- sky.addColorStop(1,night?'#1c2850':'#e2f8ff');
- ctx.fillStyle=sky;ctx.fillRect(0,0,W,H);
- if(night){
-  ctx.fillStyle='#fff3ad';ctx.beginPath();ctx.arc(W-80,65,25,0,Math.PI*2);ctx.fill();
-  for(let i=0;i<50;i++){ctx.fillStyle='#fff';ctx.fillRect((i*139)%W,(i*61)%190,2,2)}
- }else{
-  ctx.fillStyle='#ffdf70';ctx.beginPath();ctx.arc(W-80,65,28,0,Math.PI*2);ctx.fill();
- }
- const ground=H*.23;ctx.fillStyle=night?'#173a34':'#55b84c';ctx.fillRect(0,ground,W,H-ground);
- zones.forEach((z,i)=>{
-  const x=zoneX(i)-cameraX,w=1400;
-  if(x<W&&x+w>0){
-   ctx.fillStyle=z.color+'bb';ctx.fillRect(x,ground,w,H-ground);
-   ctx.fillStyle='#ffffff44';ctx.fillRect(x,ground,w,7);
-   drawText(z.name,x+w/2,ground+30,15);
-   drawText('Necesitas '+fmt(z.need),x+w/2,ground+50,12);
+  function updateIncome(now){
+   const seconds=Math.floor((now-lastIncome)/1000);
+   if(seconds<=0)return;
+   lastIncome+=seconds*1000;
+   let total=0;
+   for(const c of creatures)total+=c.money*seconds;
+   if(total)player.money+=total;
   }
- });
- const sx=SAFE-cameraX;ctx.fillStyle='#fff';ctx.fillRect(sx-4,ground,8,H-ground);
- drawText('ZONA SEGURA',sx,ground+75,14);
-
- const bx=250-cameraX;
- ctx.fillStyle='#704626';ctx.fillRect(bx-100,GARDEN_Y-95,200,125);
- ctx.fillStyle='#c98b50';ctx.beginPath();ctx.moveTo(bx-120,GARDEN_Y-95);ctx.lineTo(bx,GARDEN_Y-165);ctx.lineTo(bx+120,GARDEN_Y-95);ctx.fill();
- drawText('🏠 BASE',bx,GARDEN_Y-174,18);
-
- const gx=GARDEN_X-cameraX;
- ctx.fillStyle='#287b36';ctx.fillRect(gx-15,GARDEN_Y-50,300,115);
- ctx.strokeStyle='#e7c17a';ctx.lineWidth=6;ctx.strokeRect(gx-15,GARDEN_Y-50,300,115);
- drawText('🌱 JARDÍN',gx+135,GARDEN_Y-61,17);
- 
- let totalIncomePerSec = 0;
- for(const c of creatures) totalIncomePerSec += c.money;
- if(creatures.length > 0) {
-  drawText(`🪙 +${fmt(totalIncomePerSec)} /s`, gx+135, GARDEN_Y-83, 13, '#ffd45c');
- }
-
- for(const c of creatures){
-  const x=c.x-cameraX;
-  if(x>-30&&x<W+30){drawText('🐾',x,c.y,22);drawText(c.name,x,c.y+22,10)}
- }
- 
- const tx=GARDEN_X+420-cameraX,ty=GARDEN_Y+8;
- ctx.fillStyle='#222c3d';ctx.fillRect(tx-58,ty-23,116,46);
- ctx.fillStyle='#697b8e';ctx.fillRect(tx-48,ty-14,96,28);
- for(let i=0;i<7;i++){ctx.fillStyle='#e0e6ef';ctx.fillRect(tx-42+i*14,ty-9,5,18)}
- ctx.strokeStyle='#ffd45c';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(tx+38,ty-18);ctx.lineTo(tx+38,ty-61);ctx.lineTo(tx+5,ty-61);ctx.stroke();
- ctx.fillStyle='#7be3ff';ctx.fillRect(tx+1,ty-72,35,16);
- drawText('TIENDA',tx,ty-82,13);drawText('B: comprar',tx,ty+52,12);
-
- for(const e of eggs)if(!e.carried)drawEgg(e);
- for(const b of bosses){
-  const x=b.x-cameraX;
-  if(x>-60&&x<W+60){drawText(zones[b.zone].boss,x,b.y,32);drawText('JEFE',x,b.y+23,10)}
- }
-
- for (const id in otherPlayers) {
-  const p = otherPlayers[id];
-  const px = p.x - cameraX;
-  if (px > -50 && px < canvas.width + 50) {
-   drawText('🧑', px, p.z, 30);
-   drawText('Jugador', px, p.z - 20, 11, '#ffd45c');
+  function updateHud(){
+   $('money').textContent=fmt(player.money);$('speed').textContent=fmt(player.power);
+   $('amount').textContent=fmt(amount());$('capacity').textContent=`${player.inventory.length+(player.carrying?1:0)}/${player.capacity}`;
+   $('day').textContent=day;
+   $('egginv').textContent=player.inventory.length?player.inventory.map(e=>zones[e.zone].name+(e.special?' ✨':'')+' ('+Math.max(0,Math.ceil(e.timer))+'s)').join(' · '):'Vacío';
+   $('gardeninv').textContent=creatures.length?creatures.map(c=>c.name+' ('+fmt(c.money)+'/s)').join(' · '):'Todavía no tienes criaturas.';
+   if(shopOpen)updateShop();
   }
- }
+  function drawText(t,x,y,size=16,color='#fff'){
+   ctx.font=`bold ${size}px Arial`;ctx.textAlign='center';ctx.fillStyle=color;ctx.fillText(t,x,y);
+  }
+  function drawEgg(e){
+   const x=e.x-cameraX;
+   if(x<-60||x>canvas.width+60)return;
+   const z=zones[e.zone];
+   if(e.special){
+    const g=ctx.createRadialGradient(x,e.y,2,x,e.y,55);
+    g.addColorStop(0,'#fffbd9');g.addColorStop(.3,'#ffe86bbb');g.addColorStop(1,'#ffe86b00');
+    ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,e.y,55,0,Math.PI*2);ctx.fill();
+   }
+   ctx.fillStyle=e.special?'#fff6a8':z.color;
+   ctx.beginPath();ctx.ellipse(x,e.y,17,23,0,0,Math.PI*2);ctx.fill();
+   ctx.strokeStyle=e.special?'#fff':'#ffffffaa';ctx.lineWidth=e.special?4:2;ctx.stroke();
+   drawText(e.special?'✨':'🥚',x,e.y+7,17);
+   drawText(e.special?'HUEVO ESPECIAL':z.name,x,e.y-31,11,e.special?'#fff4a0':'#fff');
+  }
+  function draw(){
+   const W=canvas.width,H=canvas.height;
+   ctx.clearRect(0,0,W,H);
+   const sky=ctx.createLinearGradient(0,0,0,H);
+   sky.addColorStop(0,night?'#07122b':'#65caff');
+   sky.addColorStop(1,night?'#1c2850':'#e2f8ff');
+   ctx.fillStyle=sky;ctx.fillRect(0,0,W,H);
+   if(night){
+    ctx.fillStyle='#fff3ad';ctx.beginPath();ctx.arc(W-80,65,25,0,Math.PI*2);ctx.fill();
+    for(let i=0;i<50;i++){ctx.fillStyle='#fff';ctx.fillRect((i*139)%W,(i*61)%190,2,2)}
+   }else{
+    ctx.fillStyle='#ffdf70';ctx.beginPath();ctx.arc(W-80,65,28,0,Math.PI*2);ctx.fill();
+   }
+   const ground=H*.23;ctx.fillStyle=night?'#173a34':'#55b84c';ctx.fillRect(0,ground,W,H-ground);
+   zones.forEach((z,i)=>{
+    const x=zoneX(i)-cameraX,w=1400;
+    if(x<W&&x+w>0){
+     ctx.fillStyle=z.color+'bb';ctx.fillRect(x,ground,w,H-ground);
+     ctx.fillStyle='#ffffff44';ctx.fillRect(x,ground,w,7);
+     drawText(z.name,x+w/2,ground+30,15);
+     drawText('Necesitas '+fmt(z.need),x+w/2,ground+50,12);
+    }
+   });
+   const sx=SAFE-cameraX;ctx.fillStyle='#fff';ctx.fillRect(sx-4,ground,8,H-ground);
+   drawText('ZONA SEGURA',sx,ground+75,14);
 
- const px=player.x-cameraX;
- drawText('🧑',px,player.y,30);
- if(player.carrying){
-  drawText('🥚',px+23,player.y-23,19);
-  if(player.carrying.special)drawText('✨',px+35,player.y-39,15);
- }
- if(night){
-  ctx.fillStyle='#0006';ctx.fillRect(0,0,W,H);
-  drawText('🌙 NOCHE: NO PUEDES ENTRAR A LAS ZONAS',W/2,110,19);
- }
- if(nearBase()||nearTreadmill())drawText('Presiona B para comprar mejoras',Math.max(180,Math.min(W-180,px)),H-22,14);
+   const bx=250-cameraX;
+   ctx.fillStyle='#704626';ctx.fillRect(bx-100,GARDEN_Y-95,200,125);
+   ctx.fillStyle='#c98b50';ctx.beginPath();ctx.moveTo(bx-120,GARDEN_Y-95);ctx.lineTo(bx,GARDEN_Y-165);ctx.lineTo(bx+120,GARDEN_Y-95);ctx.fill();
+   drawText('🏠 BASE',bx,GARDEN_Y-174,18);
+
+   const gx=GARDEN_X-cameraX;
+   ctx.fillStyle='#287b36';ctx.fillRect(gx-15,GARDEN_Y-50,300,115);
+   ctx.strokeStyle='#e7c17a';ctx.lineWidth=6;ctx.strokeRect(gx-15,GARDEN_Y-50,300,115);
+   drawText('🌱 JARDÍN',gx+135,GARDEN_Y-61,17);
+   
+   let totalIncomePerSec = 0;
+   for(const c of creatures) totalIncomePerSec += c.money;
+   if(creatures.length > 0) {
+    drawText(`🪙 +${fmt(totalIncomePerSec)} /s`, gx+135, GARDEN_Y-83, 13, '#ffd45c');
+   }
+
+   for(const c of creatures){
+    const x=c.x-cameraX;
+    if(x>-30&&x<W+30){drawText('🐾',x,c.y,22);drawText(c.name,x,c.y+22,10)}
+   }
+   
+   const tx=GARDEN_X+420-cameraX,ty=GARDEN_Y+8;
+   ctx.fillStyle='#222c3d';ctx.fillRect(tx-58,ty-23,116,46);
+   ctx.fillStyle='#697b8e';ctx.fillRect(tx-48,ty-14,96,28);
+   for(let i=0;i<7;i++){ctx.fillStyle='#e0e6ef';ctx.fillRect(tx-42+i*14,ty-9,5,18)}
+   ctx.strokeStyle='#ffd45c';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(tx+38,ty-18);ctx.lineTo(tx+38,ty-61);ctx.lineTo(tx+5,ty-61);ctx.stroke();
+   ctx.fillStyle='#7be3ff';ctx.fillRect(tx+1,ty-72,35,16);
+   drawText('TIENDA',tx,ty-82,13);drawText('B: comprar',tx,ty+52,12);
+
+   for(const e of eggs)if(!e.carried)drawEgg(e);
+   for(const b of bosses){
+    const x=b.x-cameraX;
+    if(x>-60&&x<W+60){drawText(zones[b.zone].boss,x,b.y,32);drawText('JEFE',x,b.y+23,10)}
+   }
+
+   for (const id in otherPlayers) {
+    const p = otherPlayers[id];
+    const px = p.x - cameraX;
+    if (px > -50 && px < canvas.width + 50) {
+     drawText('🧑', px, p.z, 30);
+     drawText('Jugador', px, p.z - 20, 11, '#ffd45c');
+    }
+   }
+
+   const px=player.x-cameraX;
+   drawText('🧑',px,player.y,30);
+   if(player.carrying){
+    drawText('🥚',px+23,player.y-23,19);
+    if(player.carrying.special)drawText('✨',px+35,player.y-39,15);
+   }
+   if(night){
+    ctx.fillStyle='#0006';ctx.fillRect(0,0,W,H);
+    drawText('🌙 NOCHE: NO PUEDES ENTRAR A LAS ZONAS',W/2,110,19);
+   }
+   if(nearBase()||nearTreadmill())drawText('Presiona B para comprar mejoras',Math.max(180,Math.min(W-180,px)),H-22,14);
+  }
+
+  function loop(now){
+   const dt=Math.min(.04,(now-(loop.last||now))/1000);loop.last=now;
+   if(!shopOpen){
+    movePlayer(dt);updateBosses(dt);
+    if(player.carrying&&player.x<=SAFE)deliverEgg();
+    updateInventory(dt);updateEvents(Date.now());updateIncome(Date.now());
+   }
+   cameraX=Math.max(0,Math.min(MAP_W-canvas.width,player.x-canvas.width*.38));
+   draw();updateHud();
+   const elapsed=Date.now()-phaseStart;
+   $('time').textContent=Math.max(0,Math.ceil(((night?NIGHT_MS:DAY_MS)-elapsed)/1000));
+   requestAnimationFrame(loop);
+  }
+
+  window.addEventListener('keydown',e=>{
+   keys[e.code]=true;
+   if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code))e.preventDefault();
+   if(e.repeat)return;
+   if(e.code==='KeyE')interact();
+   if(e.code==='KeyB')openShop();
+  });
+  window.addEventListener('keyup',e=>keys[e.code]=false);
+  window.addEventListener('blur',()=>keys={});
+
+  setInterval(saveGame, 20000);
+  createWorld();
+  updateHud();
+  requestAnimationFrame(loop);
 }
-function loop(now){
- const dt=Math.min(.04,(now-(loop.last||now))/1000);loop.last=now;
- if(!shopOpen){
-  movePlayer(dt);updateBosses(dt);
-  if(player.carrying&&player.x<=SAFE)deliverEgg();
-  updateInventory(dt);updateEvents(Date.now());updateIncome(Date.now());
- }
- cameraX=Math.max(0,Math.min(MAP_W-canvas.width,player.x-canvas.width*.38));
- draw();updateHud();
- const elapsed=Date.now()-phaseStart;
- $('time').textContent=Math.max(0,Math.ceil(((night?NIGHT_MS:DAY_MS)-elapsed)/1000));
- requestAnimationFrame(loop);
-}
-window.addEventListener('keydown',e=>{
- keys[e.code]=true;
- if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code))e.preventDefault();
- if(e.repeat)return;
- if(e.code==='KeyE')interact();
- if(e.code==='KeyB')openShop();
-});
-window.addEventListener('keyup',e=>keys[e.code]=false);
-window.addEventListener('blur',()=>keys={});
-
-setInterval(saveGame, 30000);
-
-loadGame();
-createWorld();
-updateHud();
-requestAnimationFrame(loop);
-})();
 </script>
 </body>
 </html>
