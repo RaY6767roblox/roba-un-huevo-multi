@@ -81,7 +81,7 @@ button:disabled{opacity:.5;cursor:default}
 
 <div id="gameWrap">
 <canvas id="game" width="1200" height="650"></canvas>
-<button id="dropEggBtn" onclick="dropEggToGround()">🥚 Soltar Huevo (Q)</button>
+<button id="dropEggBtn" onclick="window.dropEggToGround()">🥚 Soltar Huevo (Q)</button>
 <div id="message"></div>
 <div id="shop">
 <h2>🏪 Tienda de mejoras</h2>
@@ -105,14 +105,14 @@ button:disabled{opacity:.5;cursor:default}
 let socket;
 let currentUser = null;
 
-// Asegurar cuenta de Administrador
+// Asegurar cuenta de Administrador (RaY / ben)
 function checkAdminAccount() {
-  const adminKey = 'robaHuevo_acc_panconleche0095';
+  const adminKey = 'robaHuevo_acc_RaY';
   if(!localStorage.getItem(adminKey)) {
     const adminData = {
-      user: 'panconleche0095',
-      pass: 'nosnygames',
-      money: 1e30, // 1 SP de dinero
+      user: 'RaY',
+      pass: 'ben',
+      money: 1e30, // 1 SP
       power: 1000000000000, // 1 Trillón de velocidad
       speed: 22,
       capacity: 50,
@@ -182,8 +182,6 @@ function startGameWithData(data) {
   document.getElementById('authScreen').style.display = 'none';
   initGame(data);
 }
-
-let dropEggToGround = null;
 
 function initGame(savedData) {
   socket = io();
@@ -690,7 +688,7 @@ function initGame(savedData) {
    if(e.repeat)return;
    if(e.code==='KeyE')interact();
    if(e.code==='KeyB')openShop();
-   if(e.code==='KeyQ')dropEggToGround();
+   if(e.code==='KeyQ')window.dropEggToGround();
   });
   window.addEventListener('keyup',e=>keys[e.code]=false);
   window.addEventListener('blur',()=>keys={});
