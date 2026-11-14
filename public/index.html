@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Roba un Huevo - Admin Edition v3</title>
+<title>Roba un Huevo - Admin Edition v4</title>
 <!-- Librería de Socket.IO -->
 <script src="/socket.io/socket.io.js"></script>
 <style>
@@ -214,7 +214,7 @@ function initGame(savedData) {
   const SAFE=750, GARDEN_X=350, GARDEN_Y=700;
   const MAP_W=70000, MAP_H=1000;
   
-  // TIEMPOS CONFIGURADOS: 120s de Día y 10s de Noche
+  // Tiempos configurados: 120s de Día y 10s de Noche
   const DURACION_DIA = 120000;   // 120 segundos de día
   const DURACION_NOCHE = 10000;  // 10 segundos de noche
 
@@ -442,7 +442,7 @@ function initGame(savedData) {
     bosses.forEach((boss, index) => { boss.x = boss.homeX; boss.y = boss.homeY; boss.chasing = null; });
     player.carrying = null;
     document.getElementById('dropEggBtn').style.display = 'none';
-    say("🌙 ¡Noche! Todos los huevos se reiniciaron.");
+    say("🌙 ¡Noche! Los huevos crecen x10 más rápido.");
   }
 
   function nearestEgg(){
@@ -527,9 +527,12 @@ function initGame(savedData) {
    socket.emit('playerMovement', { x: player.x, z: player.y });
   }
   function updateInventory(dt){
+   // Multiplicador x10 si es de noche
+   const multiplicadorVelocidad = night ? 10 : 1;
+   
    for(const e of player.inventory){
     if(e.timer>0){
-     e.timer-=dt;
+     e.timer -= dt * multiplicadorVelocidad;
      if(e.timer<=0){
       const z=zones[e.zone];
       let name=z.creatures[Math.floor(Math.random()*z.creatures.length)];
@@ -669,7 +672,7 @@ function initGame(savedData) {
    }
    if(night){
     ctx.fillStyle='#0006';ctx.fillRect(0,0,W,H);
-    drawText('🌙 NOCHE: NO PUEDES ENTRAR A LAS ZONAS',W/2,110,19);
+    drawText('🌙 NOCHE (x10 VELOCIDAD DE HUEVOS): NO PUEDES ENTRAR A LAS ZONAS',W/2,110,19);
    }
    if(nearBase()||nearTreadmill())drawText('Presiona B para comprar mejoras',Math.max(180,Math.min(W-180,px)),H-22,14);
   }
