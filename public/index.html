@@ -213,7 +213,7 @@ function initGame(savedData) {
 
   const SAFE=750, GARDEN_X=350, GARDEN_Y=700;
   const MAP_W=70000, MAP_H=1000;
-  const DAY_MS=60000, NIGHT_MS=10000;
+  const DAY_MS=60000, NIGHT_MS=120000; // Noche configurada a 120 segundos
 
   const zones=[
    {name:'Bosque',need:10,color:'#438d40',boss:'🌳',open:8,reward:25,income:3,creatures:['Pollito del bosque','Zorro verde','Ciervo pequeño']},
@@ -402,7 +402,6 @@ function initGame(savedData) {
   };
   $('closeShop').onclick=closeShop;
 
-  // FUNCIÓN PARA SOLTAR EL HUEVO AL SUELO Y QUE UN AMIGO LO PUEDA AGARRAR
   window.dropEggToGround = function() {
     if(!player.carrying) {
       say('No llevas ningún huevo para soltar.');
@@ -678,7 +677,9 @@ function initGame(savedData) {
    cameraX=Math.max(0,Math.min(MAP_W-canvas.width,player.x-canvas.width*.38));
    draw();updateHud();
    const elapsed=Date.now()-phaseStart;
-   $('time').textContent=Math.max(0,Math.ceil(((night?NIGHT_MS:DAY_MS)-elapsed)/1000));
+   const activeNightMs = 120000;
+   const activeDayMs = 60000;
+   $('time').textContent=Math.max(0,Math.ceil(((night?activeNightMs:activeDayMs)-elapsed)/1000));
    requestAnimationFrame(loop);
   }
 
