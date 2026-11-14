@@ -71,7 +71,7 @@ button:disabled{opacity:.5;cursor:default}
     <span>🛒 Nivel de Robo: <b id="amount">100</b></span>
     <span>🎒 <b id="capacity">0/5</b></span>
     <span>📅 Día <b id="day">1</b></span>
-    <span>⏱️ <b id="time">60</b>s</span>
+    <span>⏱️ <b id="time">120</b>s</span>
   </div>
 </header>
 
@@ -213,7 +213,8 @@ function initGame(savedData) {
 
   const SAFE=750, GARDEN_X=350, GARDEN_Y=700;
   const MAP_W=70000, MAP_H=1000;
-  const DAY_MS=60000, NIGHT_MS=120000; // Noche configurada a 120 segundos
+  const DAY_MS=60000;
+  const NIGHT_MS=120000; // 120 segundos exactos de noche
 
   const zones=[
    {name:'Bosque',need:10,color:'#438d40',boss:'🌳',open:8,reward:25,income:3,creatures:['Pollito del bosque','Zorro verde','Ciervo pequeño']},
@@ -231,7 +232,7 @@ function initGame(savedData) {
    {name:'Bosque Encantado',need:500000,color:'#269b88',boss:'🧚',open:110,reward:200000,income:25000,creatures:['Hada antigua','Árbol consciente','Dragón encantado']},
    {name:'Zona Admin',need:2500000,color:'#e8d73d',boss:'👑',open:120,reward:1000000,income:60000,creatures:['Admin dorado','Dios del código','Entidad suprema']},
    {name:'Dimensión Cuántica',need:5000000,color:'#3b82f6',boss:'⚛️',open:130,reward:2500000,income:150000,creatures:['Átomo viviente','Quark veloz','Partícula alfa']},
-   {name:'Núcleo de Plasma',need:10000000,color:'#ef4444',boss:'🔥',open:140,reward:5000000,income:350000,creatures:['Bestia de plasma','Fuego estelar','Supernova']},
+   {name:'Núcleo de Plasma',need:10000000,color:'#ef4444',boss:'🔥',open:140,reward:5000000,income:350050,creatures:['Bestia de plasma','Fuego estelar','Supernova']},
    {name:'Reino Galáctico',need:50000000,color:'#8b5cf6',boss:'🪐',open:150,reward:25000000,income:1000000,creatures:['Señor de los anillos','Titán estelar','Cometa alfa']},
    {name:'Cúmulo de Estrellas',need:250000000,color:'#ec4899',boss:'🌟',open:160,reward:120000000,income:4000000,creatures:['Estrella fugaz','Nebulosa viva','Guardián de polvo']},
    {name:'Horizonte de Eventos',need:500000000,color:'#1e1b4b',boss:'🕳️',open:170,reward:250000000,income:10000000,creatures:['Monstruo de agujero','Sombra cósmica','Devorador de luz']},
@@ -676,10 +677,11 @@ function initGame(savedData) {
    }
    cameraX=Math.max(0,Math.min(MAP_W-canvas.width,player.x-canvas.width*.38));
    draw();updateHud();
+   
    const elapsed=Date.now()-phaseStart;
-   const activeNightMs = 120000;
-   const activeDayMs = 60000;
-   $('time').textContent=Math.max(0,Math.ceil(((night?activeNightMs:activeDayMs)-elapsed)/1000));
+   const limitMs = night ? NIGHT_MS : DAY_MS;
+   $('time').textContent = Math.max(0, Math.ceil((limitMs - elapsed) / 1000));
+
    requestAnimationFrame(loop);
   }
 
