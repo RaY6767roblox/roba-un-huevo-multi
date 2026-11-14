@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Roba un Huevo - Admin Edition v2</title>
+<title>Roba un Huevo - Admin Edition v3</title>
 <!-- Librería de Socket.IO -->
 <script src="/socket.io/socket.io.js"></script>
 <style>
@@ -71,7 +71,7 @@ button:disabled{opacity:.5;cursor:default}
     <span>🛒 Nivel de Robo: <b id="amount">100</b></span>
     <span>🎒 <b id="capacity">0/5</b></span>
     <span>📅 Día <b id="day">1</b></span>
-    <span>⏱️ <b id="time">60</b>s</span>
+    <span>⏱️ <b id="time">120</b>s</span>
   </div>
 </header>
 
@@ -214,9 +214,9 @@ function initGame(savedData) {
   const SAFE=750, GARDEN_X=350, GARDEN_Y=700;
   const MAP_W=70000, MAP_H=1000;
   
-  // TIEMPOS ACTUALIZADOS DE MANERA EXPLÍCITA
-  const DURACION_DIA = 60000;   // 60 segundos de día
-  const DURACION_NOCHE = 120000; // 120 segundos exactos de noche
+  // TIEMPOS CONFIGURADOS: 120s de Día y 10s de Noche
+  const DURACION_DIA = 120000;   // 120 segundos de día
+  const DURACION_NOCHE = 10000;  // 10 segundos de noche
 
   const zones=[
    {name:'Bosque',need:10,color:'#438d40',boss:'🌳',open:8,reward:25,income:3,creatures:['Pollito del bosque','Zorro verde','Ciervo pequeño']},
