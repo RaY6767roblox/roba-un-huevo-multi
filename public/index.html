@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Roba un Huevo - Login Roblox Style</title>
+<title>Roba un Huevo - Admin Edition</title>
 <!-- Librería de Socket.IO -->
 <script src="/socket.io/socket.io.js"></script>
 <style>
@@ -22,6 +22,14 @@ button:disabled{opacity:.5;cursor:default}
 #gameWrap{position:relative}
 .small{font-size:12px;color:#cbd5e1}
 
+/* Botón flotante para soltar huevo */
+#dropEggBtn {
+  position: absolute; bottom: 20px; right: 20px;
+  background: #ef4444; color: white; border: none; padding: 12px 18px;
+  border-radius: 10px; font-weight: bold; cursor: pointer; z-index: 5;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.4); display: none;
+}
+
 /* Pantalla de Inicio / Login tipo Roblox */
 #authScreen{position:fixed;top:0;left:0;width:100vw;height:100vh;background:linear-gradient(135deg, #0f172a, #1e293b);z-index:1000;display:flex;justify-content:center;align-items:center}
 .auth-box{background:#172338;border:2px solid #ffd45c;border-radius:16px;padding:30px;width:min(400px, 90vw);box-shadow:0 10px 40px rgba(0,0,0,0.6);text-align:center}
@@ -35,7 +43,6 @@ button:disabled{opacity:.5;cursor:default}
 </head>
 <body>
 
-<!-- PANTALLA DE INICIO / REGISTRO TIPO ROBLOX -->
 <div id="authScreen">
   <div class="auth-box">
     <h2 id="authTitle">🎮 Iniciar Sesión</h2>
@@ -57,7 +64,7 @@ button:disabled{opacity:.5;cursor:default}
 </div>
 
 <header>
-  <h1>🥚 Roba un Huevo — Multiversal con Cuentas</h1>
+  <h1>🥚 Roba un Huevo — Admin Edition</h1>
   <div id="stats">
     <span>🪙 <b id="money">100</b></span>
     <span>⚡ Velocidad: <b id="speed">10</b></span>
@@ -69,11 +76,12 @@ button:disabled{opacity:.5;cursor:default}
 </header>
 
 <div id="help">
-<b>WASD / flechas:</b> moverte · <b>SHIFT:</b> correr · <b>E:</b> robar o plantar huevo · <b>B:</b> tienda cerca de la base.
+<b>WASD / flechas:</b> moverte · <b>SHIFT:</b> correr · <b>E:</b> robar o plantar huevo · <b>Q o Botón:</b> soltar huevo para un amigo · <b>B:</b> tienda.
 </div>
 
 <div id="gameWrap">
 <canvas id="game" width="1200" height="650"></canvas>
+<button id="dropEggBtn" onclick="dropEggToGround()">🥚 Soltar Huevo (Q)</button>
 <div id="message"></div>
 <div id="shop">
 <h2>🏪 Tienda de mejoras</h2>
@@ -97,6 +105,26 @@ button:disabled{opacity:.5;cursor:default}
 let socket;
 let currentUser = null;
 
+// Asegurar cuenta de Administrador
+function checkAdminAccount() {
+  const adminKey = 'robaHuevo_acc_panconleche0095';
+  if(!localStorage.getItem(adminKey)) {
+    const adminData = {
+      user: 'panconleche0095',
+      pass: 'nosnygames',
+      money: 1e30, // 1 SP de dinero
+      power: 1000000000000, // 1 Trillón de velocidad
+      speed: 22,
+      capacity: 50,
+      inventory: [],
+      creatures: [],
+      day: 10
+    };
+    localStorage.setItem(adminKey, JSON.stringify(adminData));
+  }
+}
+checkAdminAccount();
+
 function toggleAuthMode() {
   const isLogin = document.getElementById('loginForm').style.display !== 'none';
   document.getElementById('loginForm').style.display = isLogin ? 'none' : 'block';
@@ -109,10 +137,9 @@ function tryLogin() {
   const p = document.getElementById('loginPass').value.trim();
   if(!u || !p) { document.getElementById('loginError').textContent = 'Rellena todos los campos'; return; }
   
-  // Guardar temporalmente y verificar con localStorage del navegador por ahora (simulando cuenta guardada)
   const savedAcc = localStorage.getItem('robaHuevo_acc_' + u);
   if(!savedAcc) {
-    document.getElementById('loginError').textContent = 'La cuenta no existe';
+    document.getElementById('loginError').textContent = 'La cuenta no existe. ¡Regístrate!';
     return;
   }
   const accData = JSON.parse(savedAcc);
@@ -131,14 +158,14 @@ function tryRegister() {
   if(!u || !p) { document.getElementById('regError').textContent = 'Rellena todos los campos'; return; }
   
   if(localStorage.getItem('robaHuevo_acc_' + u)) {
-    document.getElementById('regError').textContent = 'El usuario ya existe';
+    document.getElementById('regError').textContent = 'Este usuario ya existe. Inicia sesión.';
     return;
   }
 
   const newAcc = {
     user: u,
     pass: p,
-    money: 1000,
+    money: 100,
     power: 10,
     speed: 10,
     capacity: 5,
@@ -155,6 +182,8 @@ function startGameWithData(data) {
   document.getElementById('authScreen').style.display = 'none';
   initGame(data);
 }
+
+let dropEggToGround = null;
 
 function initGame(savedData) {
   socket = io();
@@ -271,6 +300,10 @@ function initGame(savedData) {
 
   const rand=(a,b)=>a+Math.random()*(b-a);
   const fmt=n=>{
+    if(n>=1e30) return (n/1e30).toFixed(2)+' SP';
+    if(n>=1e27) return (n/1e27).toFixed(2)+' SX';
+    if(n>=1e24) return (n/1e24).toFixed(2)+' SP';
+    if(n>=1e21) return (n/1e21).toFixed(2)+' SX';
     if(n>=1e18) return (n/1e18).toFixed(2)+' Qi';
     if(n>=1e15) return (n/1e15).toFixed(2)+' Qa';
     if(n>=1e12) return (n/1e12).toFixed(2)+' T';
@@ -371,6 +404,26 @@ function initGame(savedData) {
   };
   $('closeShop').onclick=closeShop;
 
+  // FUNCIÓN PARA SOLTAR EL HUEVO AL SUELO Y QUE UN AMIGO LO PUEDA AGARRAR
+  window.dropEggToGround = function() {
+    if(!player.carrying) {
+      say('No llevas ningún huevo para soltar.');
+      return;
+    }
+    const droppedEgg = player.carrying;
+    droppedEgg.x = player.x + 40;
+    droppedEgg.y = player.y;
+    droppedEgg.carried = false;
+    droppedEgg.stolen = false;
+    
+    eggs.push(droppedEgg);
+    player.carrying = null;
+    document.getElementById('dropEggBtn').style.display = 'none';
+    say('🥚 ¡Has soltado el huevo al suelo! Un amigo puede recogerlo.');
+    updateHud();
+    saveGame();
+  };
+
   function reiniciarHuevosDeNoche() {
     eggs.length = 0;
     zones.forEach((zone, index) => {
@@ -388,6 +441,7 @@ function initGame(savedData) {
     spawnSpecialEggs();
     bosses.forEach((boss, index) => { boss.x = boss.homeX; boss.y = boss.homeY; boss.chasing = null; });
     player.carrying = null;
+    document.getElementById('dropEggBtn').style.display = 'none';
     say("🌙 ¡Noche! Todos los huevos se reiniciaron.");
   }
 
@@ -413,16 +467,21 @@ function initGame(savedData) {
    const z=zones[e.zone];
    if(player.power<z.need){ say(`Necesitas ${fmt(z.need)} de poder para robar en ${z.name}.`); return; }
    if(player.inventory.length>=player.capacity){ say('Inventario lleno.'); return; }
+   
    e.stolen=true;e.carried=true;player.carrying=e;
-   bosses[e.zone].chasing=e.id;
-   say((e.special?'✨ ¡HUEVO ESPECIAL! ':'')+'¡Robaste un huevo de '+z.name+'! Corre a la zona segura.');
+   eggs = eggs.filter(item => item.id !== e.id);
+   if(bosses[e.zone]) bosses[e.zone].chasing=e.id;
+
+   document.getElementById('dropEggBtn').style.display = 'block';
+   say((e.special?'✨ ¡HUEVO ESPECIAL! ':'')+'¡Robaste un huevo de '+z.name+'! Corre a la zona segura o suéltalo con Q.');
   }
   function deliverEgg(){
    const e=player.carrying;if(!e)return;
    if(player.inventory.length>=player.capacity){say('Inventario lleno.');return;}
    e.carried=false;e.timer=zones[e.zone].open;
    player.inventory.push(e);player.money+=zones[e.zone].reward;
-   eggs=eggs.filter(x=>x.id!==e.id);resetBoss(e);player.carrying=null;
+   resetBoss(e);player.carrying=null;
+   document.getElementById('dropEggBtn').style.display = 'none';
    say(`¡Huevo entregado! +${fmt(zones[e.zone].reward)} monedas.`);
    updateHud();saveGame();
   }
@@ -430,8 +489,9 @@ function initGame(savedData) {
    const e=player.carrying;if(!e)return;
    if(player.inventory.length>=player.capacity){say('Inventario lleno.');return}
    e.carried=false;e.timer=zones[e.zone].open;
-   player.inventory.push(e);eggs=eggs.filter(x=>x.id!==e.id);
+   player.inventory.push(e);
    resetBoss(e);player.carrying=null;
+   document.getElementById('dropEggBtn').style.display = 'none';
    say('🌱 ¡Huevo plantado!');updateHud();saveGame();
   }
   function updateBosses(dt){
@@ -446,6 +506,7 @@ function initGame(savedData) {
      player.x=SAFE-70;player.y=700;
      player.carrying=null;e.carried=false;e.stolen=false;
      e.x=zoneX(e.zone)+rand(100,1200);e.y=rand(250,850);
+     document.getElementById('dropEggBtn').style.display = 'none';
      resetBoss(e);say('¡El jefe te alcanzó!');
     }
    }
@@ -629,6 +690,7 @@ function initGame(savedData) {
    if(e.repeat)return;
    if(e.code==='KeyE')interact();
    if(e.code==='KeyB')openShop();
+   if(e.code==='KeyQ')dropEggToGround();
   });
   window.addEventListener('keyup',e=>keys[e.code]=false);
   window.addEventListener('blur',()=>keys={});
