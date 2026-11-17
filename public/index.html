@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Roba un Huevo - Admin Edition v4</title>
+<title>Roba un Huevo - Auto Edition</title>
 <!-- Librería de Socket.IO -->
 <script src="/socket.io/socket.io.js"></script>
 <style>
@@ -64,7 +64,7 @@ button:disabled{opacity:.5;cursor:default}
 </div>
 
 <header>
-  <h1>🥚 Roba un Huevo — Admin Edition</h1>
+  <h1>🥚 Roba un Huevo — Auto Edition</h1>
   <div id="stats">
     <span>🪙 <b id="money">100</b></span>
     <span>⚡ Velocidad: <b id="speed">10</b></span>
@@ -90,6 +90,9 @@ button:disabled{opacity:.5;cursor:default}
 <p>Sube +<b id="shopAmount">100</b> de poder</p>
 <p>Precio: <b id="shopPrice">5.000</b> monedas</p>
 <button id="buySpeed">⚡ Comprar Poder de Robo</button>
+<div style="margin-top:10px;">
+  <label><input type="checkbox" id="autoBuyToggle"> <b>Activar Compra Automática</b></label>
+</div>
 <hr>
 <button id="buyCapacity">🎒 Ampliar capacidad</button>
 <button id="closeShop">Cerrar tienda</button>
@@ -104,26 +107,7 @@ button:disabled{opacity:.5;cursor:default}
 <script>
 let socket;
 let currentUser = null;
-
-// Asegurar cuenta de Administrador (RaY / ben)
-function checkAdminAccount() {
-  const adminKey = 'robaHuevo_acc_RaY';
-  if(!localStorage.getItem(adminKey)) {
-    const adminData = {
-      user: 'RaY',
-      pass: 'ben',
-      money: 1e30, // 1 SP
-      power: 1000000000000, // 1 Trillón de velocidad
-      speed: 22,
-      capacity: 50,
-      inventory: [],
-      creatures: [],
-      day: 10
-    };
-    localStorage.setItem(adminKey, JSON.stringify(adminData));
-  }
-}
-checkAdminAccount();
+let autoBuy = false; // Estado de compra automática
 
 function toggleAuthMode() {
   const isLogin = document.getElementById('loginForm').style.display !== 'none';
@@ -137,19 +121,17 @@ function tryLogin() {
   const p = document.getElementById('loginPass').value.trim();
   if(!u || !p) { document.getElementById('loginError').textContent = 'Rellena todos los campos'; return; }
   
-  const savedAcc = localStorage.getItem('robaHuevo_acc_' + u);
-  if(!savedAcc) {
-    document.getElementById('loginError').textContent = 'La cuenta no existe. ¡Regístrate!';
-    return;
-  }
-  const accData = JSON.parse(savedAcc);
-  if(accData.pass !== p) {
-    document.getElementById('loginError').textContent = 'Contraseña incorrecta';
-    return;
-  }
+  socket = io();
+  socket.emit('loginRequest', { user: u, pass: p });
 
-  currentUser = u;
-  startGameWithData(accData);
+  socket.on('loginResponse', (res) => {
+    if(res.success) {
+      currentUser = u;
+      startGameWithData(res.data);
+    } else {
+      document.getElementById('loginError').textContent = res.message;
+    }
+  });
 }
 
 function tryRegister() {
@@ -157,25 +139,17 @@ function tryRegister() {
   const p = document.getElementById('regPass').value.trim();
   if(!u || !p) { document.getElementById('regError').textContent = 'Rellena todos los campos'; return; }
   
-  if(localStorage.getItem('robaHuevo_acc_' + u)) {
-    document.getElementById('regError').textContent = 'Este usuario ya existe. Inicia sesión.';
-    return;
-  }
+  socket = io();
+  socket.emit('registerRequest', { user: u, pass: p });
 
-  const newAcc = {
-    user: u,
-    pass: p,
-    money: 100,
-    power: 10,
-    speed: 10,
-    capacity: 5,
-    inventory: [],
-    creatures: [],
-    day: 1
-  };
-  localStorage.setItem('robaHuevo_acc_' + u, JSON.stringify(newAcc));
-  currentUser = u;
-  startGameWithData(newAcc);
+  socket.on('registerResponse', (res) => {
+    if(res.success) {
+      currentUser = u;
+      startGameWithData(res.data);
+    } else {
+      document.getElementById('regError').textContent = res.message;
+    }
+  });
 }
 
 function startGameWithData(data) {
@@ -184,7 +158,6 @@ function startGameWithData(data) {
 }
 
 function initGame(savedData) {
-  socket = io();
   let otherPlayers = {};
 
   socket.on('currentPlayers', (players) => {
@@ -212,9 +185,8 @@ function initGame(savedData) {
   const $=id=>document.getElementById(id);
 
   const SAFE=750, GARDEN_X=350, GARDEN_Y=700;
-  const MAP_W=70000, MAP_H=1000;
+  const MAP_W=75000, MAP_H=1000;
   
-  // Tiempos configurados: 120s de Día y 10s de Noche
   const DURACION_DIA = 120000;   // 120 segundos de día
   const DURACION_NOCHE = 10000;  // 10 segundos de noche
 
@@ -264,10 +236,15 @@ function initGame(savedData) {
    {name:'Templo Primigenio',need:100000000000000000,color:'#fbbf24',boss:'⛩️',open:410,reward:50000000000000000,income:4000000000000000,creatures:['Maestro Antiguo','Espíritu Sagrado']},
    {name:'Dimensión Secreta',need:250000000000000000,color:'#64748b',boss:'🗝️',open:420,reward:120000000000000000,income:9000000000000000,creatures:['Guardián de la Llave','Sombra Oculta']},
    {name:'Cima del Infinito',need:500000000000000000,color:'#c084fc',boss:'🏔️',open:430,reward:250000000000000000,income:20000000000000000,creatures:['Espíritu de las Alturas','Dios de la Cumbre']},
-   {name:'El Quintillón Supreme',need:1000000000000000000,color:'#ffffff',boss:'💎',open:440,reward:500000000000000000,income:50000000000000000,creatures:['Dios Quintillón','Creador Absoluto','Entidad Omnipotente']}
+   {name:'El Quintillón Supreme',need:1000000000000000000,color:'#ffffff',boss:'💎',open:440,reward:500000000000000000,income:50000000000000000,creatures:['Dios Quintillón','Creador Absoluto','Entidad Omnipotente']},
+   {name:'Zona SX',need:1e21,color:'#818cf8',boss:'🌌',open:450,reward:1e20,income:1e18,creatures:['Sextaple estelar','Cometa SX']},
+   {name:'Zona SP',need:1e24,color:'#c084fc',boss:'🔮',open:460,reward:1e23,income:1e21,creatures:['Septaple místico','Orbe SP']},
+   {name:'Zona OC',need:1e27,color:'#f43f5e',boss:'🌀',open:470,reward:1e26,income:1e24,creatures:['Octaple cósmico','Vórtice OC']},
+   {name:'Zona NO',need:1e30,color:'#fbbf24',boss:'⚡',open:480,reward:1e29,income:1e27,creatures:['Nonaple supremo','Rayo NO']},
+   {name:'Zona Infinito',need:1e33,color:'#38bdf8',boss:'♾️',open:490,reward:1e32,income:1e30,creatures:['Entidad Infinita', 'Dios del Todo']}
   ];
 
-  const specialZones=[9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45];
+  const specialZones=[9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50];
   const angelCycle=['Ángel','Demonio','Ángeles y Demonios'];
 
   let player={
@@ -286,23 +263,27 @@ function initGame(savedData) {
   let shopOpen=false, messageTimer=null;
 
   function saveGame(){
-    const currentAcc = JSON.parse(localStorage.getItem('robaHuevo_acc_' + currentUser));
-    if(currentAcc) {
-      currentAcc.money = player.money;
-      currentAcc.power = player.power;
-      currentAcc.speed = player.speed;
-      currentAcc.capacity = player.capacity;
-      currentAcc.inventory = player.inventory;
-      currentAcc.creatures = creatures;
-      currentAcc.day = day;
-      localStorage.setItem('robaHuevo_acc_' + currentUser, JSON.stringify(currentAcc));
+    if(currentUser) {
+      socket.emit('saveGameData', {
+        user: currentUser,
+        data: {
+          money: player.money,
+          power: player.power,
+          speed: player.speed,
+          capacity: player.capacity,
+          inventory: player.inventory,
+          creatures: creatures,
+          day: day
+        }
+      });
     }
   }
 
   const rand=(a,b)=>a+Math.random()*(b-a);
   const fmt=n=>{
-    if(n>=1e30) return (n/1e30).toFixed(2)+' SP';
-    if(n>=1e27) return (n/1e27).toFixed(2)+' SX';
+    if(n>=1e33) return (n/1e33).toFixed(2)+' INF';
+    if(n>=1e30) return (n/1e30).toFixed(2)+' NO';
+    if(n>=1e27) return (n/1e27).toFixed(2)+' OC';
     if(n>=1e24) return (n/1e24).toFixed(2)+' SP';
     if(n>=1e21) return (n/1e21).toFixed(2)+' SX';
     if(n>=1e18) return (n/1e18).toFixed(2)+' Qi';
@@ -315,22 +296,27 @@ function initGame(savedData) {
   const zoneX=i=>1000+i*1450;
 
   function amount(){
-   if(player.power>=100000000000000000) return 100000000000000000;
-   if(player.power>=10000000000000000) return 10000000000000000;
-   if(player.power>=1000000000000000) return 1000000000000000;
-   if(player.power>=100000000000000) return 100000000000000;
-   if(player.power>=10000000000000) return 10000000000000;
-   if(player.power>=1000000000000) return 1000000000000;
-   if(player.power>=100000000000) return 100000000000;
-   if(player.power>=10000000000) return 10000000000;
-   if(player.power>=1000000000) return 1000000000;
-   if(player.power>=100000000) return 100000000;
-   if(player.power>=10000000) return 10000000;
-   if(player.power>=3000000) return 1000000;
-   if(player.power>=100000) return 100000;
-   if(player.power>=25000) return 10000;
-   if(player.power>=10000) return 1000;
-   return 100;
+   if(player.power>=1e32) return 1e31;
+   if(player.power>=1e29) return 1e28;
+   if(player.power>=1e26) return 1e25;
+   if(player.power>=1e23) return 1e22;
+   if(player.power>=1e20) return 1e19;
+   if(player.power>=100000000000000000) return 10000000000000000;
+   if(player.power>=10000000000000000) return 1000000000000000;
+   if(player.power>=1000000000000000) return 100000000000000;
+   if(player.power>=100000000000000) return 10000000000000;
+   if(player.power>=10000000000000) return 1000000000000;
+   if(player.power>=1000000000000) return 100000000000;
+   if(player.power>=100000000000) return 10000000000;
+   if(player.power>=10000000000) return 1000000000;
+   if(player.power>=1000000000) return 100000000;
+   if(player.power>=100000000) return 10000000;
+   if(player.power>=10000000) return 1000000;
+   if(player.power>=3000000) return 100000;
+   if(player.power>=100000) return 10000;
+   if(player.power>=25000) return 1000;
+   if(player.power>=10000) return 100;
+   return 10;
   }
   function speedPrice(){ return amount() * 50; }
 
@@ -389,12 +375,17 @@ function initGame(savedData) {
   document.getElementById('buySpeed').onclick = function () {
     const cost = speedPrice();
     const increase = amount();
-    if (player.money < cost) { say('No tienes suficientes monedas. Necesitas ' + fmt(cost) + ' monedas.'); return; }
+    if (player.money < cost) { say('No tienes suficientes monedas.'); return; }
     player.money -= cost;
     player.power += increase;
     player.speed = Math.min(22, 10 + Math.floor(Math.log10(player.power + 1) * 1.2));
     say('¡Compraste +' + fmt(increase) + ' de poder de robo!');
     updateHud(); updateShop(); saveGame();
+  };
+
+  document.getElementById('autoBuyToggle').onchange = function(e) {
+    autoBuy = e.target.checked;
+    say(autoBuy ? '🤖 ¡Compra automática activada!' : '🤖 Compra automática desactivada.');
   };
 
   $('buyCapacity').onclick=()=>{
@@ -527,9 +518,7 @@ function initGame(savedData) {
    socket.emit('playerMovement', { x: player.x, z: player.y });
   }
   function updateInventory(dt){
-   // Multiplicador x10 si es de noche
    const multiplicadorVelocidad = night ? 10 : 1;
-   
    for(const e of player.inventory){
     if(e.timer>0){
      e.timer -= dt * multiplicadorVelocidad;
@@ -566,7 +555,29 @@ function initGame(savedData) {
    lastIncome+=seconds*1000;
    let total=0;
    for(const c of creatures)total+=c.money*seconds;
-   if(total)player.money+=total;
+   if(total) player.money+=total;
+
+   // Lógica de Compra Automática en cada segundo si está activa
+   if(autoBuy) {
+     let boughtAny = false;
+     while(true) {
+       const cost = speedPrice();
+       if(player.money >= cost) {
+         player.money -= cost;
+         const increase = amount();
+         player.power += increase;
+         player.speed = Math.min(22, 10 + Math.floor(Math.log10(player.power + 1) * 1.2));
+         boughtAny = true;
+       } else {
+         break;
+       }
+     }
+     if(boughtAny) {
+       updateHud();
+       updateShop();
+       saveGame();
+     }
+   }
   }
   function updateHud(){
    $('money').textContent=fmt(player.money);$('speed').textContent=fmt(player.power);
@@ -672,7 +683,7 @@ function initGame(savedData) {
    }
    if(night){
     ctx.fillStyle='#0006';ctx.fillRect(0,0,W,H);
-    drawText('🌙 NOCHE (x10 VELOCIDAD DE HUEVOS): NO PUEDES ENTRAR A LAS ZONAS',W/2,110,19);
+    drawText('🌙 NOCHE (x10 VELOCIDAD): NO PUEDES ENTRAR A LAS ZONAS',W/2,110,19);
    }
    if(nearBase()||nearTreadmill())drawText('Presiona B para comprar mejoras',Math.max(180,Math.min(W-180,px)),H-22,14);
   }
