@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Roba un Huevo - Auto Edition</title>
+<title>Roba un Huevo - Admin Infinity Edition</title>
 <!-- Librería de Socket.IO -->
 <script src="/socket.io/socket.io.js"></script>
 <style>
@@ -64,7 +64,7 @@ button:disabled{opacity:.5;cursor:default}
 </div>
 
 <header>
-  <h1>🥚 Roba un Huevo — Auto Edition</h1>
+  <h1>🥚 Roba un Huevo — Admin Infinity</h1>
   <div id="stats">
     <span>🪙 <b id="money">100</b></span>
     <span>⚡ Velocidad: <b id="speed">10</b></span>
@@ -107,7 +107,7 @@ button:disabled{opacity:.5;cursor:default}
 <script>
 let socket;
 let currentUser = null;
-let autoBuy = false; // Estado de compra automática
+let autoBuy = false;
 
 function toggleAuthMode() {
   const isLogin = document.getElementById('loginForm').style.display !== 'none';
@@ -281,6 +281,7 @@ function initGame(savedData) {
 
   const rand=(a,b)=>a+Math.random()*(b-a);
   const fmt=n=>{
+    if(n>=1e308) return 'INF';
     if(n>=1e33) return (n/1e33).toFixed(2)+' INF';
     if(n>=1e30) return (n/1e30).toFixed(2)+' NO';
     if(n>=1e27) return (n/1e27).toFixed(2)+' OC';
@@ -296,29 +297,9 @@ function initGame(savedData) {
   const zoneX=i=>1000+i*1450;
 
   function amount(){
-   if(player.power>=1e32) return 1e31;
-   if(player.power>=1e29) return 1e28;
-   if(player.power>=1e26) return 1e25;
-   if(player.power>=1e23) return 1e22;
-   if(player.power>=1e20) return 1e19;
-   if(player.power>=100000000000000000) return 10000000000000000;
-   if(player.power>=10000000000000000) return 1000000000000000;
-   if(player.power>=1000000000000000) return 100000000000000;
-   if(player.power>=100000000000000) return 10000000000000;
-   if(player.power>=10000000000000) return 1000000000000;
-   if(player.power>=1000000000000) return 100000000000;
-   if(player.power>=100000000000) return 10000000000;
-   if(player.power>=10000000000) return 1000000000;
-   if(player.power>=1000000000) return 100000000;
-   if(player.power>=100000000) return 10000000;
-   if(player.power>=10000000) return 1000000;
-   if(player.power>=3000000) return 100000;
-   if(player.power>=100000) return 10000;
-   if(player.power>=25000) return 1000;
-   if(player.power>=10000) return 100;
-   return 10;
+   return 1e300; // Poder de robo masivo para admin
   }
-  function speedPrice(){ return amount() * 50; }
+  function speedPrice(){ return 0; }
 
   function say(text){
    $('message').textContent=text;
@@ -357,7 +338,7 @@ function initGame(savedData) {
   function nearBase(){ return Math.hypot(player.x-250,player.y-GARDEN_Y)<260; }
   function nearTreadmill(){ return Math.hypot(player.x-(GARDEN_X+420),player.y-GARDEN_Y)<170; }
   function openShop(){
-   if(!nearBase()&&!nearTreadmill()){ say('Acércate a la base o a la caminadora para comprar mejoras.'); return; }
+   if(!nearBase()&&!nearTreadmill()){ say('Acércate a la base o a la caminadora para abrir la tienda.'); return; }
    shopOpen=true;$('shop').style.display='block';updateShop();
   }
   function closeShop(){shopOpen=false;$('shop').style.display='none'}
@@ -366,20 +347,16 @@ function initGame(savedData) {
     document.getElementById('shopMoney').textContent = fmt(player.money);
     document.getElementById('shopSpeed').textContent = fmt(player.power);
     document.getElementById('shopAmount').textContent = fmt(amount());
-    document.getElementById('shopPrice').textContent = fmt(speedPrice());
+    document.getElementById('shopPrice').textContent = '0 (GRATIS ADMIN)';
     const buyButton = document.getElementById('buySpeed');
-    buyButton.textContent = `⚡ Comprar +${fmt(amount())} de Poder (${fmt(speedPrice())} monedas)`;
-    document.getElementById('buyCapacity').textContent = `🎒 Ampliar capacidad (${fmt(250 + (player.capacity - 5) * 250)} monedas)`;
+    buyButton.textContent = `⚡ Comprar Poder Infinito`;
+    document.getElementById('buyCapacity').textContent = `🎒 Ampliar capacidad (GRATIS)`;
   }
 
   document.getElementById('buySpeed').onclick = function () {
-    const cost = speedPrice();
-    const increase = amount();
-    if (player.money < cost) { say('No tienes suficientes monedas.'); return; }
-    player.money -= cost;
-    player.power += increase;
-    player.speed = Math.min(22, 10 + Math.floor(Math.log10(player.power + 1) * 1.2));
-    say('¡Compraste +' + fmt(increase) + ' de poder de robo!');
+    player.power = 1e308;
+    player.speed = 22;
+    say('⚡ ¡Poder y velocidad establecidos al INFINITO!');
     updateHud(); updateShop(); saveGame();
   };
 
@@ -389,10 +366,8 @@ function initGame(savedData) {
   };
 
   $('buyCapacity').onclick=()=>{
-   const cost=250+(player.capacity-5)*250;
-   if(player.money<cost){say('No tienes suficientes monedas.');return}
-   player.money-=cost;player.capacity++;
-   say('¡Capacidad aumentada!');updateHud();updateShop();saveGame();
+   player.capacity += 50;
+   say('¡Capacidad aumentada masivamente!');updateHud();updateShop();saveGame();
   };
   $('closeShop').onclick=closeShop;
 
@@ -470,10 +445,10 @@ function initGame(savedData) {
    const e=player.carrying;if(!e)return;
    if(player.inventory.length>=player.capacity){say('Inventario lleno.');return;}
    e.carried=false;e.timer=zones[e.zone].open;
-   player.inventory.push(e);player.money+=zones[e.zone].reward;
+   player.inventory.push(e);player.money += 1e300;
    resetBoss(e);player.carrying=null;
    document.getElementById('dropEggBtn').style.display = 'none';
-   say(`¡Huevo entregado! +${fmt(zones[e.zone].reward)} monedas.`);
+   say(`¡Huevo entregado con éxito!`);
    updateHud();saveGame();
   }
   function plantEgg(){
@@ -528,7 +503,7 @@ function initGame(savedData) {
       if(e.zone===11)name=angelCycle[(day-1)%3];
       creatures.push({name,zone:e.zone,money:z.income,x:GARDEN_X+rand(25,260),y:GARDEN_Y+rand(-45,55)});
       e.opened=true;
-      say(`¡Eclosionó ${name}! Produce ${fmt(z.income)}/s.`);
+      say(`¡Eclosionó ${name}!`);
       saveGame();
      }
     }
@@ -553,30 +528,14 @@ function initGame(savedData) {
    const seconds=Math.floor((now-lastIncome)/1000);
    if(seconds<=0)return;
    lastIncome+=seconds*1000;
-   let total=0;
-   for(const c of creatures)total+=c.money*seconds;
-   if(total) player.money+=total;
+   player.money = 1e308; // Mantener dinero infinito
 
-   // Lógica de Compra Automática en cada segundo si está activa
    if(autoBuy) {
-     let boughtAny = false;
-     while(true) {
-       const cost = speedPrice();
-       if(player.money >= cost) {
-         player.money -= cost;
-         const increase = amount();
-         player.power += increase;
-         player.speed = Math.min(22, 10 + Math.floor(Math.log10(player.power + 1) * 1.2));
-         boughtAny = true;
-       } else {
-         break;
-       }
-     }
-     if(boughtAny) {
-       updateHud();
-       updateShop();
-       saveGame();
-     }
+     player.power = 1e308;
+     player.speed = 22;
+     updateHud();
+     updateShop();
+     saveGame();
    }
   }
   function updateHud(){
@@ -685,7 +644,7 @@ function initGame(savedData) {
     ctx.fillStyle='#0006';ctx.fillRect(0,0,W,H);
     drawText('🌙 NOCHE (x10 VELOCIDAD): NO PUEDES ENTRAR A LAS ZONAS',W/2,110,19);
    }
-   if(nearBase()||nearTreadmill())drawText('Presiona B para comprar mejoras',Math.max(180,Math.min(W-180,px)),H-22,14);
+   if(nearBase()||nearTreadmill())drawText('Presiona B para abrir tienda',Math.max(180,Math.min(W-180,px)),H-22,14);
   }
 
   function loop(now){
@@ -724,3 +683,109 @@ function initGame(savedData) {
 </script>
 </body>
 </html>
+⚠️ Recuerda también actualizar tu archivo server.js en el servidor para que la cuenta admin (RaY / ben) inicie siempre con dinero y poder infinito en cualquier dispositivo:
+
+JavaScript
+const express = require('express');
+const http = require('http');
+const { Server } = require('socket.io');
+
+const app = express();
+const server = http.createServer(app);
+const io = new Server(server);
+
+app.use(express.static(__parentDir || __dirname));
+
+// Cuenta Admin con valores infinitos sincronizados en la nube
+const accounts = {
+  "RaY": {
+    user: "RaY",
+    pass: "ben",
+    money: 1e308,
+    power: 1e308,
+    speed: 22,
+    capacity: 100,
+    inventory: [],
+    creatures: [],
+    day: 100
+  }
+};
+
+const players = {};
+
+io.on('connection', (socket) => {
+  console.log('Un usuario se ha conectado:', socket.id);
+
+  socket.on('loginRequest', (data) => {
+    const acc = accounts[data.user];
+    if(!acc) {
+      socket.emit('loginResponse', { success: false, message: 'La cuenta no existe.' });
+      return;
+    }
+    if(acc.pass !== data.pass) {
+      socket.emit('loginResponse', { success: false, message: 'Contraseña incorrecta.' });
+      return;
+    }
+    // Si es admin, mantener infinito siempre al entrar
+    if(data.user === "RaY") {
+      acc.money = 1e308;
+      acc.power = 1e308;
+    }
+    socket.emit('loginResponse', { success: true, data: acc });
+  });
+
+  socket.on('registerRequest', (data) => {
+    if(accounts[data.user]) {
+      socket.emit('registerResponse', { success: false, message: 'El usuario ya existe.' });
+      return;
+    }
+    const newAcc = {
+      user: data.user,
+      pass: data.pass,
+      money: 100,
+      power: 10,
+      speed: 10,
+      capacity: 5,
+      inventory: [],
+      creatures: [],
+      day: 1
+    };
+    accounts[data.user] = newAcc;
+    socket.emit('registerResponse', { success: true, data: newAcc });
+  });
+
+  socket.on('saveGameData', (packet) => {
+    if(accounts[packet.user]) {
+      accounts[packet.user].money = (packet.user === "RaY") ? 1e308 : packet.data.money;
+      accounts[packet.user].power = (packet.user === "RaY") ? 1e308 : packet.data.power;
+      accounts[packet.user].speed = packet.data.speed;
+      accounts[packet.user].capacity = packet.data.capacity;
+      accounts[packet.user].inventory = packet.data.inventory;
+      accounts[packet.user].creatures = packet.data.creatures;
+      accounts[packet.user].day = packet.data.day;
+    }
+  });
+
+  players[socket.id] = { id: socket.id, x: 250, z: 700 };
+  socket.emit('currentPlayers', players);
+  socket.broadcast.emit('newPlayer', players[socket.id]);
+
+  socket.on('playerMovement', (movementData) => {
+    if (players[socket.id]) {
+      players[socket.id].x = movementData.x;
+      players[socket.id].z = movementData.z;
+      socket.broadcast.emit('playerMoved', players[socket.id]);
+    }
+  });
+
+  socket.on('disconnect', () => {
+    console.log('Usuario desconectado:', socket.id);
+    delete players[socket.id];
+    io.emit('disconnectPlayer', socket.id);
+  });
+});
+
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+  console.log(`Servidor corriendo en puerto ${PORT}`);
+});
