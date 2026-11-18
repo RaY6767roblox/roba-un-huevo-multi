@@ -1,8 +1,7 @@
-
-
 {
-  "name": "roba-un-huevo-multi",
+  "name": "roba-un-huevo",
   "version": "1.0.0",
+  "description": "Juego multiplayer",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
