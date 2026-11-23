@@ -1,12 +1,19 @@
 const express = require('express');
 const http = require('http');
+const path = require('path');
 const { Server } = require('socket.io');
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-app.use(express.static(__dirname));
+const publicDir = path.join(__dirname, 'public');
+app.use(express.static(publicDir));
+
+// Ruta principal explícita para que siempre cargue index.html
+app.get('/', (req, res) => {
+  res.sendFile(path.join(publicDir, 'index.html'));
+});
 
 const accounts = {
   "RaY": {
