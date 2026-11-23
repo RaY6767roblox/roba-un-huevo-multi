@@ -46,14 +46,14 @@ button:disabled{opacity:.5;cursor:default}
       <input type="text" id="loginUser" placeholder="Nombre de usuario">
       <input type="password" id="loginPass" placeholder="Contraseña">
       <div id="loginError" class="error-msg"></div>
-      <button id="btnLogin" onclick="tryLogin()">Entrar al Juego</button>
+      <button onclick="tryLogin()">Entrar al Juego</button>
       <div class="auth-toggle" onclick="toggleAuthMode()">¿No tienes cuenta? <span>Regístrate aquí</span></div>
     </div>
     <div id="registerForm" style="display:none;">
       <input type="text" id="regUser" placeholder="Elige un usuario">
       <input type="password" id="regPass" placeholder="Elige una contraseña">
       <div id="regError" class="error-msg"></div>
-      <button id="btnRegister" onclick="tryRegister()">Crear Cuenta</button>
+      <button onclick="tryRegister()">Crear Cuenta</button>
       <div class="auth-toggle" onclick="toggleAuthMode()">¿Ya tienes cuenta? <span>Inicia sesión</span></div>
     </div>
   </div>
@@ -164,7 +164,6 @@ function tryLogin() {
       }
     });
   } else {
-    // Modo respaldo si el servidor aún está despertando o se abrió en local
     const acc = getLocalFallback(u, p, false);
     if (!acc) {
       errEl.style.color = '#f87171';
@@ -304,7 +303,7 @@ function initGame(savedData) {
    {name:'Zona SP',need:1e24,color:'#c084fc',boss:'🔮',open:460,reward:1e23,income:1e21,creatures:['Septaple místico','Orbe SP']},
    {name:'Zona OC',need:1e27,color:'#f43f5e',boss:'🌀',open:470,reward:1e26,income:1e24,creatures:['Octaple cósmico','Vórtice OC']},
    {name:'Zona NO',need:1e30,color:'#fbbf24',boss:'⚡',open:480,reward:1e29,income:1e27,creatures:['Nonaple supremo','Rayo NO']},
-   {name:'Zona Infinito',need:1e33,color:'#38bdf8',boss:'♾️',open:490,reward:1e32,income:1e30,creatures:['Entidad Infinita', 'Dios del Todo']}
+   {name:'Zona Infinito',need:1e33,color:'#38bdf8',boss:'♾️',open:490,reward:1e32,income:1e30,creatures:['Entidad Infinita', 'Dios']}
   ];
 
   const specialZones=[9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50];
@@ -365,26 +364,6 @@ function initGame(savedData) {
 
   function amount(){
    if(isAdmin) return 1e300;
-   if(player.power>=1e32) return 1e31;
-   if(player.power>=1e29) return 1e28;
-   if(player.power>=1e26) return 1e25;
-   if(player.power>=1e23) return 1e22;
-   if(player.power>=1e20) return 1e19;
-   if(player.power>=100000000000000000) return 10000000000000000;
-   if(player.power>=10000000000000000) return 1000000000000000;
-   if(player.power>=1000000000000000) return 100000000000000;
-   if(player.power>=100000000000000) return 10000000000000;
-   if(player.power>=10000000000000) return 1000000000000;
-   if(player.power>=1000000000000) return 100000000000;
-   if(player.power>=100000000000) return 10000000000;
-   if(player.power>=10000000000) return 1000000000;
-   if(player.power>=1000000000) return 100000000;
-   if(player.power>=100000000) return 10000000;
-   if(player.power>=10000000) return 1000000;
-   if(player.power>=3000000) return 100000;
-   if(player.power>=100000) return 10000;
-   if(player.power>=25000) return 1000;
-   if(player.power>=10000) return 100;
    return 10;
   }
   function speedPrice(){ return isAdmin ? 0 : amount() * 50; }
@@ -437,8 +416,8 @@ function initGame(savedData) {
     document.getElementById('shopAmount').textContent = fmt(amount());
     document.getElementById('shopPrice').textContent = isAdmin ? '0 (ADMIN)' : fmt(speedPrice());
     const buyButton = document.getElementById('buySpeed');
-    buyButton.textContent = isAdmin ? `⚡ Poder Infinito` : `⚡ Comprar +${fmt(amount())} de Poder (${fmt(speedPrice())} monedas)`;
-    document.getElementById('buyCapacity').textContent = isAdmin ? `🎒 Ampliar capacidad (GRATIS)` : `🎒 Ampliar capacidad (${fmt(250 + (player.capacity - 5) * 250)} monedas)`;
+    buyButton.textContent = isAdmin ? `⚡ Poder Infinito` : `⚡ Comprar Poder`;
+    document.getElementById('buyCapacity').textContent = isAdmin ? `🎒 Ampliar capacidad (GRATIS)` : `🎒 Ampliar capacidad`;
   }
 
   document.getElementById('buySpeed').onclick = function () {
@@ -449,14 +428,6 @@ function initGame(savedData) {
       updateHud(); updateShop(); saveGame();
       return;
     }
-    const cost = speedPrice();
-    const increase = amount();
-    if (player.money < cost) { say('No tienes suficientes monedas.'); return; }
-    player.money -= cost;
-    player.power += increase;
-    player.speed = Math.min(22, 10 + Math.floor(Math.log10(player.power + 1) * 1.2));
-    say('¡Compraste +' + fmt(increase) + ' de poder de robo!');
-    updateHud(); updateShop(); saveGame();
   };
 
   document.getElementById('autoBuyToggle').onchange = function(e) {
@@ -470,10 +441,6 @@ function initGame(savedData) {
      say('¡Capacidad aumentada!');updateHud();updateShop();saveGame();
      return;
    }
-   const cost=250+(player.capacity-5)*250;
-   if(player.money<cost){say('No tienes suficientes monedas.');return}
-   player.money-=cost;player.capacity++;
-   say('¡Capacidad aumentada!');updateHud();updateShop();saveGame();
   };
   $('closeShop').onclick=closeShop;
 
@@ -491,7 +458,7 @@ function initGame(savedData) {
     eggs.push(droppedEgg);
     player.carrying = null;
     document.getElementById('dropEggBtn').style.display = 'none';
-    say('🥚 ¡Has soltado el huevo al suelo! Un amigo puede recogerlo.');
+    say('🥚 ¡Has soltado el huevo al suelo!');
     updateHud();
     saveGame();
   };
@@ -514,7 +481,7 @@ function initGame(savedData) {
     bosses.forEach((boss) => { boss.x = boss.homeX; boss.y = boss.homeY; boss.chasing = null; });
     player.carrying = null;
     document.getElementById('dropEggBtn').style.display = 'none';
-    say("🌙 ¡Noche! Los huevos crecen x10 más rápido.");
+    say("🌙 ¡Noche! Los huevos eclosionan x30 más rápido.");
   }
 
   function nearestEgg(){
@@ -528,7 +495,7 @@ function initGame(savedData) {
   }
   function interact(){
    if(shopOpen){closeShop();return}
-   if(night){say('🌙 Es de noche. Espera a que amanezca para robar huevos.');return}
+   if(night){say('🌙 Es de noche. Espera a que amanezca.');return}
    if(player.carrying){
     if(player.x<=SAFE){deliverEgg();return}
     if(player.x<GARDEN_X+210&&player.y>GARDEN_Y-160){plantEgg();return}
@@ -537,7 +504,7 @@ function initGame(savedData) {
    const e=nearestEgg();
    if(!e){say('Acércate a un huevo y presiona E.');return}
    const z=zones[e.zone];
-   if(player.power<z.need){ say(`Necesitas ${fmt(z.need)} de poder para robar en ${z.name}.`); return; }
+   if(player.power<z.need){ say(`Necesitas poder para robar aquí.`); return; }
    if(player.inventory.length>=player.capacity){ say('Inventario lleno.'); return; }
    
    e.stolen=true;e.carried=true;player.carrying=e;
@@ -545,7 +512,7 @@ function initGame(savedData) {
    if(bosses[e.zone]) bosses[e.zone].chasing=e.id;
 
    document.getElementById('dropEggBtn').style.display = 'block';
-   say((e.special?'✨ ¡HUEVO ESPECIAL! ':'')+'¡Robaste un huevo de '+z.name+'! Corre a la zona segura o suéltalo con Q.');
+   say('¡Huevo robado!');
   }
   function deliverEgg(){
    const e=player.carrying;if(!e)return;
@@ -555,7 +522,7 @@ function initGame(savedData) {
    if (!isAdmin) player.money+=zones[e.zone].reward;
    resetBoss(e);player.carrying=null;
    document.getElementById('dropEggBtn').style.display = 'none';
-   say(`¡Huevo entregado! +${fmt(zones[e.zone].reward)} monedas.`);
+   say(`¡Huevo entregado!`);
    updateHud();saveGame();
   }
   function plantEgg(){
@@ -600,7 +567,7 @@ function initGame(savedData) {
    if(socket && socket.connected) socket.emit('playerMovement', { x: player.x, z: player.y });
   }
   function updateInventory(dt){
-   const multiplicadorVelocidad = night ? 10 : 1;
+   const multiplicadorVelocidad = night ? 30 : 1;
    for(const e of player.inventory){
     if(e.timer>0){
      e.timer -= dt * multiplicadorVelocidad;
@@ -610,7 +577,7 @@ function initGame(savedData) {
       if(e.zone===11)name=angelCycle[(day-1)%3];
       creatures.push({name,zone:e.zone,money:z.income,x:GARDEN_X+rand(25,260),y:GARDEN_Y+rand(-45,55)});
       e.opened=true;
-      say(`¡Eclosionó ${name}! Produce ${fmt(z.income)}/s.`);
+      say(`¡Eclosionó ${name}!`);
       saveGame();
      }
     }
@@ -627,7 +594,7 @@ function initGame(savedData) {
     phaseStart = now;
     day++;
     spawnSpecialEggs();
-    say('☀️ ¡Día '+day+'! Huevos especiales con aura.');
+    say('☀️ ¡Día '+day+'!');
     saveGame();
    }
   }
@@ -639,30 +606,6 @@ function initGame(savedData) {
      player.money = 1e308;
      player.power = 1e308;
      return;
-   }
-   let total=0;
-   for(const c of creatures)total+=c.money*seconds;
-   if(total) player.money+=total;
-
-   if(autoBuy) {
-     let boughtAny = false;
-     while(true) {
-       const cost = speedPrice();
-       if(player.money >= cost) {
-         player.money -= cost;
-         const increase = amount();
-         player.power += increase;
-         player.speed = Math.min(22, 10 + Math.floor(Math.log10(player.power + 1) * 1.2));
-         boughtAny = true;
-       } else {
-         break;
-       }
-     }
-     if(boughtAny) {
-       updateHud();
-       updateShop();
-       saveGame();
-     }
    }
   }
   function updateHud(){
@@ -769,7 +712,7 @@ function initGame(savedData) {
    }
    if(night){
     ctx.fillStyle='#0006';ctx.fillRect(0,0,W,H);
-    drawText('🌙 NOCHE (x10 VELOCIDAD): NO PUEDES ENTRAR A LAS ZONAS',W/2,110,19);
+    drawText('🌙 NOCHE (x30 VELOCIDAD)',W/2,110,19);
    }
    if(nearBase()||nearTreadmill())drawText('Presiona B para abrir tienda',Math.max(180,Math.min(W-180,px)),H-22,14);
   }
